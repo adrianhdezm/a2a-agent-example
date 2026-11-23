@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { AgentRegistry } from '@a2a-agent-example/agent-registry';
+import type { AgentRegistry } from './agent-registry.ts';
 
 const instructions = [
   'You are a coding agent that works inside your workspace folder.',

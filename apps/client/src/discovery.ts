@@ -1,5 +1,5 @@
-import { isAgentSummary } from '@a2a-agent-example/agent-registry';
-import type { AgentSummary } from '@a2a-agent-example/agent-registry';
+import { isAgentSummary } from './agent-summary.ts';
+import type { AgentSummary } from './agent-summary.ts';
 import { AgentNotFoundError } from './errors/agent-not-found-error.ts';
 import { UnexpectedResponseError } from './errors/unexpected-response-error.ts';
 

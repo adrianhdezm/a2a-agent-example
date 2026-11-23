@@ -1,10 +1,13 @@
-import { agentPaths, buildAgentCard, summarizeAgent } from '@a2a-agent-example/agent-registry';
-import type { AgentDefinition, AgentRegistry } from '@a2a-agent-example/agent-registry';
 import type { Harness, HarnessRegistry } from '@a2a-agent-example/harness-core';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { agentCardHandler, jsonRpcHandler, UserBuilder } from '@a2a-js/sdk/server/express';
 import express from 'express';
 import type { Express } from 'express';
+import { buildAgentCard } from './agent-card.ts';
+import type { AgentDefinition } from './agent-definition.ts';
+import { agentPaths } from './agent-paths.ts';
+import type { AgentRegistry } from './agent-registry.ts';
+import { summarizeAgent } from './agent-summary.ts';
 import { HarnessExecutor } from './harness-executor.ts';
 
 export interface AppOptions {

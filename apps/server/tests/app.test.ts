@@ -1,12 +1,12 @@
-import { AgentRegistry } from '@a2a-agent-example/agent-registry';
 import { HarnessRegistry } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { AgentCard, Task } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AgentRegistry } from '../src/agent-registry.ts';
 import { createApp } from '../src/app.ts';
-import { fakeAgent } from './utils/agent-definition-seed.ts';
+import { agentDefinition } from './utils/agent-definition-seed.ts';
 import { listen } from './utils/test-server.ts';
 import type { TestServer } from './utils/test-server.ts';
 
@@ -18,8 +18,8 @@ describe('createApp', () => {
     const harnesses = new HarnessRegistry();
     harnesses.register(new FakeHarness('fake', [{ type: 'turn.ended', outcome: 'completed', finalText: 'Created hello.py' }]));
     const agents = new AgentRegistry(harnesses);
-    agents.register(fakeAgent({ id: 'first-coder' }));
-    agents.register(fakeAgent({ id: 'second-coder' }));
+    agents.register(agentDefinition({ id: 'first-coder' }));
+    agents.register(agentDefinition({ id: 'second-coder' }));
     server.serve(createApp({ agents, harnesses, baseUrl: server.baseUrl }));
   });
 

@@ -1,12 +1,13 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { AgentRegistry, summarizeAgent } from '@a2a-agent-example/agent-registry';
 import { ClaudeHarness } from '@a2a-agent-example/harness-claude';
 import { CodexHarness } from '@a2a-agent-example/harness-codex';
 import { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import { registerStarterAgents } from './agents.ts';
+import { AgentRegistry } from './agent-registry.ts';
+import { summarizeAgent } from './agent-summary.ts';
 import { createApp } from './app.ts';
 import { readConfig } from './config.ts';
+import { registerStarterAgents } from './starter-agents.ts';
 
 // A generous bound on model round trips per harness turn, so a confused agent stops instead of looping.
 const claudeMaxTurns = 30;

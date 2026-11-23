@@ -25,7 +25,6 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@a2a-agent-example/agent-registry": "workspace:*",
     "@a2a-agent-example/harness-claude": "workspace:*",
     "@a2a-agent-example/harness-codex": "workspace:*",
     "@a2a-agent-example/harness-core": "workspace:*",
