@@ -18,8 +18,11 @@ describe('parseCommand', () => {
   });
 
   describe('agents', () => {
-    it('reads agents list', () => {
-      expect(parseCommand(['agents', 'list'])).toEqual({ name: 'list-agents' });
+    it.each([
+      ['list', 'list-agents'],
+      ['seed', 'seed-agents']
+    ])('reads agents %s', (subcommand, name) => {
+      expect(parseCommand(['agents', subcommand])).toEqual({ name });
     });
 
     it('reads agents create with every option', () => {
@@ -65,7 +68,10 @@ describe('parseCommand', () => {
     });
   });
 
-  it.each([[[]], [['agents']], [['agents', 'list', 'extra']], [['deploy']]])('throws a UsageError for the unknown command %j', (args) => {
-    expect(() => parseCommand(args)).toThrow(UsageError);
-  });
+  it.each([[[]], [['agents']], [['agents', 'list', 'extra']], [['agents', 'seed', 'now']], [['deploy']]])(
+    'throws a UsageError for the unknown command %j',
+    (args) => {
+      expect(() => parseCommand(args)).toThrow(UsageError);
+    }
+  );
 });

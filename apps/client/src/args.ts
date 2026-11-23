@@ -4,21 +4,36 @@ import { UsageError } from './errors/usage-error.ts';
 
 /** What the command line asks the client to do. */
 export type Command =
-  { name: 'ask'; agentId: string; prompt: string } | { name: 'list-agents' } | { name: 'create-agent'; agent: NewAgent };
+  | { name: 'ask'; agentId: string; prompt: string }
+  | { name: 'list-agents' }
+  | { name: 'seed-agents' }
+  | { name: 'create-agent'; agent: NewAgent };
 
 /** Reads the command from the command-line arguments. */
 export function parseCommand(args: readonly string[]): Command {
-  const [command, subcommand, ...rest] = args;
+  const [command, ...rest] = args;
   if (command === 'ask') {
-    return parseAsk(args.slice(1));
+    return parseAsk(rest);
   }
-  if (command === 'agents' && subcommand === 'list' && rest.length === 0) {
-    return { name: 'list-agents' };
-  }
-  if (command === 'agents' && subcommand === 'create') {
-    return { name: 'create-agent', agent: parseNewAgent(rest) };
+  if (command === 'agents') {
+    return parseAgents(rest);
   }
   throw new UsageError(`Unknown command: ${args.join(' ') || '(none)'}`);
+}
+
+// agents list | agents seed | agents create …
+function parseAgents(args: readonly string[]): Command {
+  const [subcommand, ...rest] = args;
+  if (subcommand === 'list' && rest.length === 0) {
+    return { name: 'list-agents' };
+  }
+  if (subcommand === 'seed' && rest.length === 0) {
+    return { name: 'seed-agents' };
+  }
+  if (subcommand === 'create') {
+    return { name: 'create-agent', agent: parseNewAgent(rest) };
+  }
+  throw new UsageError(`Unknown command: agents ${args.join(' ')}`.trimEnd());
 }
 
 // ask <agent-id> <prompt…>: the words after the id form the prompt.

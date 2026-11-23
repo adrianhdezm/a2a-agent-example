@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { agentsApi } from '../src/agents-api.ts';
+import { AgentExistsError } from '../src/errors/agent-exists-error.ts';
 import { AgentNotFoundError } from '../src/errors/agent-not-found-error.ts';
 import { UnexpectedResponseError } from '../src/errors/unexpected-response-error.ts';
 
@@ -10,6 +11,15 @@ const claudeCoder = {
   harness: 'claude',
   instructions: 'You write small programs.',
   cardUrl: 'http://localhost:4000/agents/claude-coder/.well-known/agent-card.json'
+};
+
+const newAgent = {
+  id: 'claude-coder',
+  name: 'Claude Coder',
+  description: 'Writes code.',
+  harness: 'claude',
+  instructions: 'Go.',
+  skills: []
 };
 
 function answering(body: unknown, status = 200) {
@@ -44,32 +54,27 @@ describe('agentsApi', () => {
 
   it('creates an agent by posting it as JSON', async () => {
     const { requests, api } = answering(claudeCoder, 201);
-    const agent = {
-      id: 'claude-coder',
-      name: 'Claude Coder',
-      description: 'Writes code.',
-      harness: 'claude',
-      instructions: 'Go.',
-      skills: [] as []
-    };
 
-    await api.create(agent);
+    await api.create(newAgent);
 
-    expect(requests[0]?.init).toMatchObject({ method: 'POST', body: JSON.stringify(agent) });
+    expect(requests[0]?.init).toMatchObject({ method: 'POST', body: JSON.stringify(newAgent) });
+  });
+
+  it('throws an AgentExistsError when the server already has an agent with the id', async () => {
+    const { api } = answering({ status: 'error', message: 'An agent already exists as "claude-coder"' }, 409);
+
+    await expect(api.create(newAgent)).rejects.toThrow(AgentExistsError);
   });
 
   it("carries the server's message when it refuses a request", async () => {
-    const { api } = answering({ status: 'error', message: 'An agent already exists as "claude-coder"' }, 409);
-    const agent = {
-      id: 'claude-coder',
-      name: 'Claude Coder',
-      description: 'Writes code.',
-      harness: 'claude',
-      instructions: 'Go.',
-      skills: [] as []
-    };
+    const { api } = answering(
+      { status: 'error', message: 'Agent "claude-coder" names the harness "gemini", which is not registered' },
+      400
+    );
 
-    await expect(api.create(agent)).rejects.toThrow('POST /agents answered 409: An agent already exists as "claude-coder"');
+    await expect(api.create({ ...newAgent, harness: 'gemini' })).rejects.toThrow(
+      'POST /agents answered 400: Agent "claude-coder" names the harness "gemini", which is not registered'
+    );
   });
 
   it('throws an UnexpectedResponseError for a body it cannot read', async () => {

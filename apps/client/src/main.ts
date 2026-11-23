@@ -1,6 +1,7 @@
 import { sendPrompt } from './a2a-request.ts';
 import { agentsApi } from './agents-api.ts';
 import { parseCommand } from './args.ts';
+import { seedAgents } from './starter-agents.ts';
 
 // The server's own PORT from the root .env; the client fails loudly without it, as the server does.
 const port = process.env.PORT;
@@ -26,6 +27,12 @@ switch (command.name) {
       console.log(`${agent.id}\t${agent.harness}\t${agent.name}`);
     }
     console.log(`${String(page.total)} agent(s)`);
+    break;
+  }
+  case 'seed-agents': {
+    for (const { id, outcome } of await seedAgents(api)) {
+      console.log(outcome === 'created' ? `Created ${id}` : `${id} already exists; left as it is`);
+    }
     break;
   }
   case 'create-agent': {

@@ -1,9 +1,19 @@
 import { isAgentPage, isAgentResponse } from './agent-response.ts';
 import type { AgentPage, AgentResponse } from './agent-response.ts';
+import { AgentExistsError } from './errors/agent-exists-error.ts';
 import { AgentNotFoundError } from './errors/agent-not-found-error.ts';
 import { UnexpectedResponseError } from './errors/unexpected-response-error.ts';
 
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
+
+/** One thing a new agent can do, as its Agent Card will advertise it. */
+export interface NewAgentSkill {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  examples: string[];
+}
 
 /** The body of `POST /agents`. */
 export interface NewAgent {
@@ -13,13 +23,14 @@ export interface NewAgent {
   harness: string;
   instructions: string;
   model?: string;
-  skills: [];
+  skills: NewAgentSkill[];
 }
 
 /** The server's `/agents` resource. */
 export interface AgentsApi {
   get(agentId: string): Promise<AgentResponse>;
   list(): Promise<AgentPage>;
+  /** Creates the agent; throws an `AgentExistsError` when the server already has one with its id. */
   create(agent: NewAgent): Promise<AgentResponse>;
 }
 
@@ -54,11 +65,16 @@ export function agentsApi(serverUrl: string, fetchUrl: Fetch = fetch): AgentsApi
       return read(`GET /agents/${agentId}`, response, isAgentResponse);
     },
     list: async () => read('GET /agents', await fetchUrl(`${url}?sortField=id&sortDirection=ASC&pageSize=100`), isAgentPage),
-    create: async (agent) =>
-      read(
-        'POST /agents',
-        await fetchUrl(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(agent) }),
-        isAgentResponse
-      )
+    create: async (agent) => {
+      const response = await fetchUrl(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agent)
+      });
+      if (response.status === 409) {
+        throw new AgentExistsError(agent.id);
+      }
+      return read('POST /agents', response, isAgentResponse);
+    }
   };
 }

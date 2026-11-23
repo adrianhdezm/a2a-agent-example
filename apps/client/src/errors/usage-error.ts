@@ -2,6 +2,7 @@ const usage = [
   'Usage:',
   '  pnpm ask <agent-id> "<prompt>"',
   '  pnpm agents list',
+  '  pnpm agents seed',
   '  pnpm agents create <agent-id> --harness <claude|codex> --instructions "<goal>" [--name "<name>"] [--description "<text>"] [--model <model>]'
 ].join('\n');
 
