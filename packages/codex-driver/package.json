@@ -1,0 +1,30 @@
+{
+  "name": "@a2a-agent-example/codex-driver",
+  "version": "0.0.0",
+  "description": "Harness driver for the Codex SDK.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-agent-example/harness": "workspace:*",
+    "@openai/codex-sdk": "^0.171.0"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "@a2a-agent-example/a2a-bridge",
+  "version": "0.0.0",
+  "description": "Exposes a harness session over A2A: an A2A SDK AgentExecutor that runs one harness turn per message.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./express": "./src/express.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "express": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-agent-example/harness": "workspace:*",
+    "@a2a-js/sdk": "catalog:"
+  },
+  "peerDependencies": {
+    "express": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  }
+}
