@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./express": "./src/express.ts"
   },
   "scripts": {
     "typecheck": "tsc -b",
@@ -17,8 +18,10 @@
   "devDependencies": {
     "@a2a-agent-example/eslint-config": "workspace:*",
     "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/express": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "express": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
@@ -26,5 +29,13 @@
   "dependencies": {
     "@a2a-agent-example/harness": "workspace:*",
     "@a2a-js/sdk": "catalog:"
+  },
+  "peerDependencies": {
+    "express": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
   }
 }

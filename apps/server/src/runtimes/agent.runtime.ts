@@ -1,24 +1,15 @@
-import { HarnessExecutor } from '@a2a-agent-example/a2a-bridge';
+import { AgentHost, buildAgentCard } from '@a2a-agent-example/a2a-bridge';
+import { expressEndpoints } from '@a2a-agent-example/a2a-bridge/express';
+import type { ExpressEndpoints } from '@a2a-agent-example/a2a-bridge/express';
 import type { HarnessRegistry } from '@a2a-agent-example/harness';
-import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
-import { agentCardHandler, jsonRpcHandler, UserBuilder } from '@a2a-js/sdk/server/express';
-import type { RequestHandler } from 'express';
-import { buildAgentCard } from '../helpers/agent-card.helper.ts';
+import type { DefaultRequestHandler } from '@a2a-js/sdk/server';
+import { agentPaths, joinUrl } from '../helpers/agent-url.helper.ts';
 import { logger } from '../logger.ts';
 import type { Agent } from '../models/agent.model.ts';
 
-/** The A2A side of one agent: the SDK's request handler and the two Express handlers in front of it. */
-export interface AgentEndpoints {
+/** One agent's A2A side: the bridge's request handler and the Express handlers in front of it. */
+export interface AgentEndpoints extends ExpressEndpoints {
   requestHandler: DefaultRequestHandler;
-  card: RequestHandler;
-  jsonRpc: RequestHandler;
-}
-
-// What outlives a change to the agent: its tasks and the harness session of each A2A context.
-interface AgentState {
-  taskStore: InMemoryTaskStore;
-  sessions: Map<string, string>;
-  endpoints: AgentEndpoints;
 }
 
 export interface AgentRuntimeOptions {
@@ -28,50 +19,46 @@ export interface AgentRuntimeOptions {
 }
 
 /**
- * Where the agents run: each agent's live A2A endpoints, by agent id, opened when its record is created and closed
- * when it is deleted. Nothing here is stored; it is rebuilt from the records.
+ * Where the agents run: the server's agents on the bridge's `AgentHost`, each with its card at the server's own URL
+ * and the Express handlers in front, by agent id. Nothing here is stored; it is rebuilt from the records.
  */
 export class AgentRuntime {
   readonly #harnessRegistry: HarnessRegistry;
   readonly #baseUrl: string;
-  readonly #agents = new Map<string, AgentState>();
+  readonly #host = new AgentHost();
+  readonly #endpoints = new Map<string, AgentEndpoints>();
 
   constructor({ harnessRegistry, baseUrl }: AgentRuntimeOptions) {
     this.#harnessRegistry = harnessRegistry;
     this.#baseUrl = baseUrl;
   }
 
-  /**
-   * Opens the agent's endpoints, or reopens them after a change: the card and the executor follow the new agent,
-   * while its tasks and sessions carry over, so a conversation goes on with the new instructions.
-   */
+  /** Opens the agent, or reopens it after a change; the host keeps its tasks and sessions across the change. */
   open(agent: Agent): AgentEndpoints {
-    const previous = this.#agents.get(agent.id);
-    const taskStore = previous?.taskStore ?? new InMemoryTaskStore();
-    const sessions = previous?.sessions ?? new Map<string, string>();
-    const executor = new HarnessExecutor({
+    const requestHandler = this.#host.open(agent.id, {
+      card: buildAgentCard({
+        name: agent.name,
+        description: agent.description,
+        skills: agent.skills,
+        url: joinUrl(this.#baseUrl, agentPaths(agent.id).jsonRpc)
+      }),
       harness: this.#harnessRegistry.get(agent.harness),
       sessionConfig: { workspace: agent.workspace, instructions: agent.instructions, model: agent.model },
-      sessions,
       logger: logger.child({ agent: agent.id })
     });
-    const requestHandler = new DefaultRequestHandler(buildAgentCard(agent, this.#baseUrl), taskStore, executor);
-    const endpoints = {
-      requestHandler,
-      card: agentCardHandler({ agentCardProvider: requestHandler }),
-      jsonRpc: jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication })
-    };
-    this.#agents.set(agent.id, { taskStore, sessions, endpoints });
+    const endpoints = { requestHandler, ...expressEndpoints(requestHandler) };
+    this.#endpoints.set(agent.id, endpoints);
     return endpoints;
   }
 
-  /** The agent's endpoints, or undefined when it has none open. */
+  /** The agent's endpoints, or undefined when it is not open. */
   get(agentId: string): AgentEndpoints | undefined {
-    return this.#agents.get(agentId)?.endpoints;
+    return this.#endpoints.get(agentId);
   }
 
-  /** Closes the agent's endpoints; tasks already running finish on their own. */
+  /** Closes the agent; tasks already running finish on their own. */
   close(agentId: string): void {
-    this.#agents.delete(agentId);
+    this.#host.close(agentId);
+    this.#endpoints.delete(agentId);
   }
 }
