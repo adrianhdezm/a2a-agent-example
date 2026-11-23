@@ -1,0 +1,30 @@
+{
+  "name": "@a2a-agent-example/harness-a2a",
+  "version": "0.0.0",
+  "description": "Exposes a harness session over A2A: an A2A SDK AgentExecutor that runs one harness turn per message.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-agent-example/harness-core": "workspace:*",
+    "@a2a-js/sdk": "catalog:"
+  }
+}

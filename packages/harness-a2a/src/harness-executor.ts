@@ -2,20 +2,31 @@ import { TaskState } from '@a2a-js/sdk';
 import { TaskNotCancelableError } from '@a2a-js/sdk/errors';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
-import type { Harness, Session, TurnEndedEvent } from '@a2a-agent-example/harness-core';
-import { messageText, resultArtifact, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
-import type { TaskIds } from '../helpers/a2a-message.helper.ts';
-import { logger } from '../logger.ts';
-import type { Agent } from '../models/agent.model.ts';
+import type { Harness, Session, SessionConfig, TurnEndedEvent } from '@a2a-agent-example/harness-core';
+import { messageText, resultArtifact, statusUpdate, submittedTask } from './a2a-message.ts';
+import type { TaskIds } from './a2a-message.ts';
 
 /** Where the executor keeps the harness session id of each A2A context. A `Map` is the in-memory one. */
 export type SessionIdStore = Pick<Map<string, string>, 'get' | 'set'>;
 
-export interface HarnessExecutorOptions {
-  agent: Agent;
-  harness: Harness;
-  sessions: SessionIdStore;
+/** Where the executor reports how each turn ends; a Pino logger is one. */
+export interface TurnLogger {
+  info(fields: Record<string, unknown>, message: string): void;
+  warn(fields: Record<string, unknown>, message: string): void;
+  error(fields: Record<string, unknown>, message: string): void;
 }
+
+export interface HarnessExecutorOptions {
+  /** The harness every turn runs on. */
+  harness: Harness;
+  /** What each session starts or resumes with: the workspace, the instructions, the model. */
+  sessionConfig: SessionConfig;
+  sessions: SessionIdStore;
+  /** Reports each turn's end; nothing is reported without one. */
+  logger?: TurnLogger;
+}
+
+const silent: TurnLogger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 
 interface TurnResult {
   state: TaskState;
@@ -23,18 +34,20 @@ interface TurnResult {
 }
 
 /**
- * The bridge between A2A and one agent's harness: each message runs one turn of the harness session of its
+ * An A2A SDK `AgentExecutor` that runs a harness: each message runs one turn of the harness session of its
  * `contextId`, published as submitted → working (with each agent message) → a `result` artifact → completed or failed.
  */
 export class HarnessExecutor implements AgentExecutor {
-  readonly #agent: Agent;
   readonly #harness: Harness;
+  readonly #sessionConfig: SessionConfig;
   readonly #sessions: SessionIdStore;
+  readonly #logger: TurnLogger;
 
-  constructor({ agent, harness, sessions }: HarnessExecutorOptions) {
-    this.#agent = agent;
+  constructor({ harness, sessionConfig, sessions, logger = silent }: HarnessExecutorOptions) {
     this.#harness = harness;
+    this.#sessionConfig = sessionConfig;
     this.#sessions = sessions;
+    this.#logger = logger;
   }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
@@ -46,7 +59,7 @@ export class HarnessExecutor implements AgentExecutor {
       session = this.#sessionFor(ids.contextId);
       this.#publishResult(ids, await this.#runTurn(session, messageText(context.userMessage), ids, eventBus), eventBus);
     } catch (error) {
-      logger.error({ err: error, agent: this.#agent.id, ...ids }, 'the harness turn threw');
+      this.#logger.error({ err: error, ...ids }, 'the harness turn threw');
       this.#publishResult(ids, failed(error instanceof Error ? error.message : String(error)), eventBus);
     } finally {
       if (session?.id !== undefined) {
@@ -62,9 +75,10 @@ export class HarnessExecutor implements AgentExecutor {
   }
 
   #sessionFor(contextId: string): Session {
-    const config = { workspace: this.#agent.workspace, instructions: this.#agent.instructions, model: this.#agent.model };
     const sessionId = this.#sessions.get(contextId);
-    return sessionId === undefined ? this.#harness.startSession(config) : this.#harness.resumeSession(sessionId, config);
+    return sessionId === undefined
+      ? this.#harness.startSession(this.#sessionConfig)
+      : this.#harness.resumeSession(sessionId, this.#sessionConfig);
   }
 
   async #runTurn(session: Session, input: string, ids: TaskIds, eventBus: ExecutionEventBus): Promise<TurnResult> {
@@ -83,11 +97,11 @@ export class HarnessExecutor implements AgentExecutor {
   }
 
   #publishResult(ids: TaskIds, result: TurnResult, eventBus: ExecutionEventBus): void {
-    const fields = { agent: this.#agent.id, ...ids, state: TaskState[result.state] };
+    const fields = { ...ids, state: TaskState[result.state] };
     if (result.state === TaskState.TASK_STATE_FAILED) {
-      logger.warn({ ...fields, error: result.text }, 'turn failed');
+      this.#logger.warn({ ...fields, error: result.text }, 'turn failed');
     } else {
-      logger.info(fields, 'turn ended');
+      this.#logger.info(fields, 'turn ended');
     }
     eventBus.publish(AgentEvent.artifactUpdate(resultArtifact(ids, result.text)));
     eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, result.state)));

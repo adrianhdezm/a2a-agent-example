@@ -1,11 +1,11 @@
 import { Role } from '@a2a-js/sdk';
 import type { Message } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
-import { messageText, resultArtifact, textPart } from '../../../src/helpers/a2a-message.helper.ts';
+import { messageText, resultArtifact, textPart } from '../src/a2a-message.ts';
 
 const ids = { taskId: 'task-1', contextId: 'context-1' };
 
-describe('a2a-message.helper', () => {
+describe('a2a-message', () => {
   describe('messageText', () => {
     it('joins the text parts of a message and leaves the other parts out', () => {
       const message: Message = {

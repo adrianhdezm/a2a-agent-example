@@ -1,9 +1,10 @@
+import { HarnessExecutor } from '@a2a-agent-example/harness-a2a';
 import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { agentCardHandler, jsonRpcHandler, UserBuilder } from '@a2a-js/sdk/server/express';
 import type { RequestHandler } from 'express';
-import { HarnessExecutor } from '../executors/harness.executor.ts';
 import { buildAgentCard } from '../helpers/agent-card.helper.ts';
+import { logger } from '../logger.ts';
 import type { Agent } from '../models/agent.model.ts';
 
 /** The A2A side of one agent: the SDK's request handler and the two Express handlers in front of it. */
@@ -48,7 +49,12 @@ export class AgentRuntime {
     const previous = this.#agents.get(agent.id);
     const taskStore = previous?.taskStore ?? new InMemoryTaskStore();
     const sessions = previous?.sessions ?? new Map<string, string>();
-    const executor = new HarnessExecutor({ agent, harness: this.#harnessRegistry.get(agent.harness), sessions });
+    const executor = new HarnessExecutor({
+      harness: this.#harnessRegistry.get(agent.harness),
+      sessionConfig: { workspace: agent.workspace, instructions: agent.instructions, model: agent.model },
+      sessions,
+      logger: logger.child({ agent: agent.id })
+    });
     const requestHandler = new DefaultRequestHandler(buildAgentCard(agent, this.#baseUrl), taskStore, executor);
     const endpoints = {
       requestHandler,

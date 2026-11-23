@@ -4,10 +4,11 @@ import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import type { HarnessEvent } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
-import { HarnessExecutor } from '../../../src/executors/harness.executor.ts';
-import { agent } from '../../utils/agent-seed.ts';
-import { fakeEventBus } from '../../utils/fake-event-bus.ts';
-import { requestContext } from '../../utils/request-context-seed.ts';
+import { HarnessExecutor } from '../src/harness-executor.ts';
+import { fakeEventBus } from './utils/fake-event-bus.ts';
+import { requestContext } from './utils/request-context-seed.ts';
+
+const sessionConfig = { workspace: '/srv/workspaces/claude-coder', instructions: 'You write small programs.' };
 
 const completedTurn: HarnessEvent[] = [
   { type: 'agent.message', text: 'Writing hello.py' },
@@ -41,7 +42,7 @@ describe('HarnessExecutor', () => {
   it('publishes submitted, working, the result artifact and completed for a completed turn', async () => {
     // Arrange
     const harness = new FakeHarness('fake', completedTurn);
-    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions: new Map() });
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act
@@ -61,19 +62,18 @@ describe('HarnessExecutor', () => {
 
   it('runs the turn with the text of the user message in the agent workspace', async () => {
     const harness = new FakeHarness('fake', completedTurn);
-    const definition = agent();
-    const executor = new HarnessExecutor({ agent: definition, harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions: new Map() });
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
 
-    expect(harness.started).toEqual([{ workspace: definition.workspace, instructions: definition.instructions, model: undefined }]);
+    expect(harness.started).toEqual([sessionConfig]);
     expect(harness.sessions[0]?.inputs).toEqual(['Write hello.py']);
   });
 
   it('carries each agent message on a working status update', async () => {
     const executor = new HarnessExecutor({
-      agent: agent(),
       harness: new FakeHarness('fake', completedTurn),
+      sessionConfig,
       sessions: new Map()
     });
     const { bus, events } = fakeEventBus();
@@ -87,7 +87,7 @@ describe('HarnessExecutor', () => {
 
   it('ends the task failed, with the error as the artifact, for a failed turn', async () => {
     const harness = new FakeHarness('fake', [{ type: 'turn.ended', outcome: 'failed', error: 'invalid x-api-key' }]);
-    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions: new Map() });
     const { bus, events, finishedCalls } = fakeEventBus();
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), bus);
@@ -103,7 +103,7 @@ describe('HarnessExecutor', () => {
       { type: 'agent.message', text: 'Second' },
       { type: 'turn.ended', outcome: 'completed' }
     ]);
-    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions: new Map() });
     const { bus, events } = fakeEventBus();
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), bus);
@@ -115,7 +115,7 @@ describe('HarnessExecutor', () => {
     // Arrange
     const harness = new FakeHarness('fake', completedTurn);
     const sessions = new Map<string, string>();
-    const executor = new HarnessExecutor({ agent: agent(), harness, sessions });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions });
 
     // Act
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
@@ -129,12 +129,42 @@ describe('HarnessExecutor', () => {
 
   it('starts a separate session for another context', async () => {
     const harness = new FakeHarness('fake', completedTurn);
-    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ harness, sessionConfig, sessions: new Map() });
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-2', contextId: 'context-2' }), fakeEventBus().bus);
 
     expect(harness.started).toHaveLength(2);
     expect(harness.resumed).toEqual([]);
+  });
+
+  it('reports how each turn ends on the logger it is given', async () => {
+    // Arrange
+    const reported: { level: string; fields: Record<string, unknown>; message: string }[] = [];
+    const record = (level: string) => (fields: Record<string, unknown>, message: string) => {
+      reported.push({ level, fields, message });
+    };
+    const logger = { info: record('info'), warn: record('warn'), error: record('error') };
+    const failing = new FakeHarness('fake', [{ type: 'turn.ended', outcome: 'failed', error: 'invalid x-api-key' }]);
+
+    // Act
+    await new HarnessExecutor({ harness: new FakeHarness('fake', completedTurn), sessionConfig, sessions: new Map(), logger }).execute(
+      requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }),
+      fakeEventBus().bus
+    );
+    await new HarnessExecutor({ harness: failing, sessionConfig, sessions: new Map(), logger }).execute(
+      requestContext('Write hello.py', { taskId: 'task-2', contextId: 'context-2' }),
+      fakeEventBus().bus
+    );
+
+    // Assert
+    expect(reported).toEqual([
+      { level: 'info', fields: { taskId: 'task-1', contextId: 'context-1', state: 'TASK_STATE_COMPLETED' }, message: 'turn ended' },
+      {
+        level: 'warn',
+        fields: { taskId: 'task-2', contextId: 'context-2', state: 'TASK_STATE_FAILED', error: 'invalid x-api-key' },
+        message: 'turn failed'
+      }
+    ]);
   });
 });
