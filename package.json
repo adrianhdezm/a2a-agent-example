@@ -1,0 +1,21 @@
+{
+  "type": "module",
+  "name": "a2a-agent-example",
+  "version": "0.0.0",
+  "description": "A2A agent server that exposes a registry of coding agents, each on its own harness.",
+  "packageManager": "pnpm@12.23.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "pnpm -r format",
+    "format:check": "pnpm -r format:check",
+    "dev:server": "pnpm --filter server dev",
+    "start:server": "pnpm --filter server start",
+    "ask": "pnpm --filter client start"
+  },
+  "private": true
+}

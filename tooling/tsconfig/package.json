@@ -1,0 +1,17 @@
+{
+  "name": "@a2a-agent-example/tsconfig",
+  "version": "0.0.0",
+  "description": "The compiler options every project in the workspace extends.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base.json": "./base.json"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  }
+}
