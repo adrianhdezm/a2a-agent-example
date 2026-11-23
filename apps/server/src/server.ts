@@ -2,8 +2,6 @@ import { resolve } from 'node:path';
 import { ClaudeHarness } from '@a2a-agent-example/claude-driver';
 import { CodexHarness } from '@a2a-agent-example/codex-driver';
 import { HarnessRegistry } from '@a2a-agent-example/harness';
-import { claudeCoderAgent } from './agents/claude-coder.agent.ts';
-import { codexCoderAgent } from './agents/codex-coder.agent.ts';
 import { createApp } from './app.ts';
 import { readConfig } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
@@ -29,12 +27,7 @@ const agentService = new AgentService({
   workspacesDir: resolve(import.meta.dirname, '../workspaces')
 });
 
-// The agents the server starts with; clients create the others through POST /agents.
-const startingAgents = await Promise.all([claudeCoderAgent, codexCoderAgent].map((input) => agentService.create(input)));
-for (const agent of startingAgents) {
-  logger.info({ agent: agent.id, harness: agent.harness, workspace: agent.workspace }, 'agent created');
-}
-
+// The server starts with no agents: clients create them through POST /agents (`pnpm agents seed` creates the starters).
 const server = createApp({ agentService, agentRuntime, baseUrl }).listen(config.port, (error) => {
   if (error) {
     throw error;
