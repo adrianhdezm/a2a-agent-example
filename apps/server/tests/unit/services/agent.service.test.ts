@@ -22,7 +22,7 @@ describe('AgentService', () => {
       });
       expect(context.agentService.get('third-coder')).toEqual(created);
       expect(workspaces).toContain('/srv/workspaces/third-coder');
-      expect(context.endpointRegistry.get('third-coder')).toBeDefined();
+      expect(context.agentRuntime.get('third-coder')).toBeDefined();
     });
 
     it('rejects a harness that is not registered, creating nothing', async () => {
@@ -52,7 +52,7 @@ describe('AgentService', () => {
       const updated = context.agentService.update('first-coder', { instructions: 'Write tests first.' });
 
       expect(updated).toMatchObject({ instructions: 'Write tests first.', harness: 'fake', createdAt: instant(0), updatedAt: instant(2) });
-      const card = await context.endpointRegistry.get('first-coder')?.requestHandler.getAgentCard();
+      const card = await context.agentRuntime.get('first-coder')?.requestHandler.getAgentCard();
       expect(card?.name).toBe('First Coder');
     });
   });
@@ -64,7 +64,7 @@ describe('AgentService', () => {
       context.agentService.delete('first-coder');
 
       expect(() => context.agentService.get('first-coder')).toThrow(expect.objectContaining({ reason: 'unknown-id' }));
-      expect(context.endpointRegistry.get('first-coder')).toBeUndefined();
+      expect(context.agentRuntime.get('first-coder')).toBeUndefined();
     });
   });
 });

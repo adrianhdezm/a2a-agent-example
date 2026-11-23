@@ -7,8 +7,8 @@ import { codexCoderAgent } from './agents/codex-coder.agent.ts';
 import { createApp } from './app.ts';
 import { readConfig } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
-import { A2AEndpointRegistry } from './registries/a2a-endpoint.registry.ts';
-import { AgentRegistry } from './registries/agent.registry.ts';
+import { AgentRuntime } from './runtimes/agent.runtime.ts';
+import { AgentStore } from './stores/agent.store.ts';
 import { AgentService } from './services/agent.service.ts';
 
 // A generous bound on model round trips per harness turn, so a confused agent stops instead of looping.
@@ -21,10 +21,10 @@ harnessRegistry.register(new ClaudeHarness({ apiKey: config.anthropicApiKey, max
 harnessRegistry.register(new CodexHarness({ apiKey: config.codexApiKey }));
 
 const baseUrl = `http://localhost:${String(config.port)}`;
-const endpointRegistry = new A2AEndpointRegistry({ harnessRegistry, baseUrl });
+const agentRuntime = new AgentRuntime({ harnessRegistry, baseUrl });
 const agentService = new AgentService({
-  agentRegistry: new AgentRegistry(),
-  endpointRegistry,
+  agentStore: new AgentStore(),
+  agentRuntime,
   harnessRegistry,
   workspacesDir: resolve(import.meta.dirname, '../workspaces')
 });
@@ -35,7 +35,7 @@ for (const agent of startingAgents) {
   logger.info({ agent: agent.id, harness: agent.harness, workspace: agent.workspace }, 'agent created');
 }
 
-const server = createApp({ agentService, endpointRegistry, baseUrl }).listen(config.port, (error) => {
+const server = createApp({ agentService, agentRuntime, baseUrl }).listen(config.port, (error) => {
   if (error) {
     throw error;
   }

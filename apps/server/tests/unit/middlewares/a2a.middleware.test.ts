@@ -4,7 +4,7 @@ import type { AppContext } from '../../../src/models/app-context.model.ts';
 import { mockNext, mockRequest, mockResponse } from '../../utils/http-mocks.ts';
 
 function contextWith(endpoints: { card: unknown; jsonRpc: unknown } | undefined): AppContext {
-  return { endpointRegistry: { get: () => endpoints } } as unknown as AppContext;
+  return { agentRuntime: { get: () => endpoints } } as unknown as AppContext;
 }
 
 describe('a2a.middleware', () => {

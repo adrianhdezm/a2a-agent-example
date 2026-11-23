@@ -2,8 +2,8 @@ import { HarnessRegistry } from '@a2a-agent-example/harness-core';
 import type { HarnessEvent } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import type { AppContext } from '../../src/models/app-context.model.ts';
-import { A2AEndpointRegistry } from '../../src/registries/a2a-endpoint.registry.ts';
-import { AgentRegistry } from '../../src/registries/agent.registry.ts';
+import { AgentRuntime } from '../../src/runtimes/agent.runtime.ts';
+import { AgentStore } from '../../src/stores/agent.store.ts';
 import { AgentService } from '../../src/services/agent.service.ts';
 import { agentInput, fixedClock } from './agent-seed.ts';
 
@@ -23,11 +23,11 @@ export async function testContext(baseUrl: string, events: HarnessEvent[] = []):
   const harness = new FakeHarness('fake', events);
   const harnessRegistry = new HarnessRegistry();
   harnessRegistry.register(harness);
-  const endpointRegistry = new A2AEndpointRegistry({ harnessRegistry, baseUrl });
+  const agentRuntime = new AgentRuntime({ harnessRegistry, baseUrl });
   const workspaces: string[] = [];
   const agentService = new AgentService({
-    agentRegistry: new AgentRegistry(),
-    endpointRegistry,
+    agentStore: new AgentStore(),
+    agentRuntime,
     harnessRegistry,
     workspacesDir: '/srv/workspaces',
     createWorkspace: (path) => Promise.resolve(workspaces.push(path)),
@@ -35,5 +35,5 @@ export async function testContext(baseUrl: string, events: HarnessEvent[] = []):
   });
   await agentService.create(agentInput({ id: 'first-coder', name: 'First Coder' }));
   await agentService.create(agentInput({ id: 'second-coder', name: 'Second Coder' }));
-  return { context: { agentService, endpointRegistry, baseUrl }, harness, workspaces };
+  return { context: { agentService, agentRuntime, baseUrl }, harness, workspaces };
 }

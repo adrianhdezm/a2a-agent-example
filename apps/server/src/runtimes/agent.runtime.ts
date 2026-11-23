@@ -20,19 +20,22 @@ interface AgentState {
   endpoints: AgentEndpoints;
 }
 
-export interface A2AEndpointRegistryOptions {
+export interface AgentRuntimeOptions {
   harnessRegistry: HarnessRegistry;
   /** The URL clients reach the server at; the Agent Cards point there. */
   baseUrl: string;
 }
 
-/** The A2A endpoints of every agent, by agent id, opened when an agent is created and closed when it is deleted. */
-export class A2AEndpointRegistry {
+/**
+ * Where the agents run: each agent's live A2A endpoints, by agent id, opened when its record is created and closed
+ * when it is deleted. Nothing here is stored; it is rebuilt from the records.
+ */
+export class AgentRuntime {
   readonly #harnessRegistry: HarnessRegistry;
   readonly #baseUrl: string;
   readonly #agents = new Map<string, AgentState>();
 
-  constructor({ harnessRegistry, baseUrl }: A2AEndpointRegistryOptions) {
+  constructor({ harnessRegistry, baseUrl }: AgentRuntimeOptions) {
     this.#harnessRegistry = harnessRegistry;
     this.#baseUrl = baseUrl;
   }

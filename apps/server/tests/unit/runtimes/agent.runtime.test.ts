@@ -4,14 +4,14 @@ import { Role } from '@a2a-js/sdk';
 import type { SendMessageRequest, Task } from '@a2a-js/sdk';
 import { ServerCallContext } from '@a2a-js/sdk/server';
 import { describe, expect, it } from 'vitest';
-import { A2AEndpointRegistry } from '../../../src/registries/a2a-endpoint.registry.ts';
+import { AgentRuntime } from '../../../src/runtimes/agent.runtime.ts';
 import { agent } from '../../utils/agent-seed.ts';
 
 function setup() {
   const harness = new FakeHarness('fake', [{ type: 'turn.ended', outcome: 'completed', finalText: 'Done' }]);
   const harnessRegistry = new HarnessRegistry();
   harnessRegistry.register(harness);
-  return { harness, registry: new A2AEndpointRegistry({ harnessRegistry, baseUrl: 'http://localhost:4000' }) };
+  return { harness, runtime: new AgentRuntime({ harnessRegistry, baseUrl: 'http://localhost:4000' }) };
 }
 
 function message(text: string, contextId = ''): SendMessageRequest {
@@ -32,32 +32,32 @@ function message(text: string, contextId = ''): SendMessageRequest {
   };
 }
 
-describe('A2AEndpointRegistry', () => {
+describe('AgentRuntime', () => {
   it("opens an agent's endpoints with its card", async () => {
-    const { registry } = setup();
+    const { runtime } = setup();
 
-    const endpoints = registry.open(agent());
+    const endpoints = runtime.open(agent());
 
-    expect(registry.get('claude-coder')).toBe(endpoints);
+    expect(runtime.get('claude-coder')).toBe(endpoints);
     expect(await endpoints.requestHandler.getAgentCard()).toMatchObject({ name: 'Claude Coder' });
   });
 
   it('closes them, after which the agent has none', () => {
-    const { registry } = setup();
-    registry.open(agent());
+    const { runtime } = setup();
+    runtime.open(agent());
 
-    registry.close('claude-coder');
+    runtime.close('claude-coder');
 
-    expect(registry.get('claude-coder')).toBeUndefined();
+    expect(runtime.get('claude-coder')).toBeUndefined();
   });
 
   it('reopens them with the changed agent, keeping its conversations', async () => {
     // Arrange
-    const { harness, registry } = setup();
-    const first = (await registry.open(agent()).requestHandler.sendMessage(message('Write hello.py'), new ServerCallContext())) as Task;
+    const { harness, runtime } = setup();
+    const first = (await runtime.open(agent()).requestHandler.sendMessage(message('Write hello.py'), new ServerCallContext())) as Task;
 
     // Act
-    const reopened = registry.open(agent({ name: 'Claude Tester', instructions: 'Write tests first.' }));
+    const reopened = runtime.open(agent({ name: 'Claude Tester', instructions: 'Write tests first.' }));
     await reopened.requestHandler.sendMessage(message('Now add a test', first.contextId), new ServerCallContext());
 
     // Assert

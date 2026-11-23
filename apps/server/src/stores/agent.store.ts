@@ -2,8 +2,11 @@ import { AgentError } from '../models/agent.model.ts';
 import type { Agent, AgentSortField } from '../models/agent.model.ts';
 import type { ListParams, PaginatedResult } from '../models/list.model.ts';
 
-/** The agents, kept in memory by id: the agents' data layer. It stores what it is given and checks only ids. */
-export class AgentRegistry {
+/**
+ * The agents' records, kept in memory by id: the agents' data layer, which a DAO replaces once agents outlive a
+ * restart. It stores what it is given and checks only ids.
+ */
+export class AgentStore {
   readonly #agents = new Map<string, Agent>();
 
   /** Stores a new agent; throws an `AgentError` (`duplicate-id`) for an id already taken. */

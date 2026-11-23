@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import createError from 'http-errors';
-import type { AgentEndpoints } from '../registries/a2a-endpoint.registry.ts';
+import type { AgentEndpoints } from '../runtimes/agent.runtime.ts';
 
 type EndpointName = 'card' | 'jsonRpc';
 
@@ -8,7 +8,7 @@ type EndpointName = 'card' | 'jsonRpc';
 // runtime is reachable exactly while it exists; an unknown agent is a 404 in the standard error shape.
 function dispatchTo(endpoint: EndpointName): RequestHandler<{ id: string }> {
   return (req, res, next) => {
-    const endpoints: AgentEndpoints | undefined = req.app.locals.context.endpointRegistry.get(req.params.id);
+    const endpoints: AgentEndpoints | undefined = req.app.locals.context.agentRuntime.get(req.params.id);
     if (endpoints === undefined) {
       next(createError(404, `Agent not found: ${req.params.id}`, { expose: true }));
       return;
