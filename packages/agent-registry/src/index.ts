@@ -6,3 +6,5 @@ export { AgentRegistry } from './agent-registry.ts';
 export { DuplicateAgentError } from './errors/duplicate-agent-error.ts';
 export { InvalidAgentIdError } from './errors/invalid-agent-id-error.ts';
 export { UnknownAgentError } from './errors/unknown-agent-error.ts';
+export { isAgentSummary, summarizeAgent } from './agent-summary.ts';
+export type { AgentSummary } from './agent-summary.ts';
