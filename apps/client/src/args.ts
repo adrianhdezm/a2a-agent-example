@@ -1,16 +1,56 @@
+import { parseArgs } from 'node:util';
+import type { NewAgent } from './agents-api.ts';
 import { UsageError } from './errors/usage-error.ts';
 
-export interface AskArgs {
-  agentId: string;
-  prompt: string;
+/** What the command line asks the client to do. */
+export type Command =
+  { name: 'ask'; agentId: string; prompt: string } | { name: 'list-agents' } | { name: 'create-agent'; agent: NewAgent };
+
+/** Reads the command from the command-line arguments. */
+export function parseCommand(args: readonly string[]): Command {
+  const [command, subcommand, ...rest] = args;
+  if (command === 'ask') {
+    return parseAsk(args.slice(1));
+  }
+  if (command === 'agents' && subcommand === 'list' && rest.length === 0) {
+    return { name: 'list-agents' };
+  }
+  if (command === 'agents' && subcommand === 'create') {
+    return { name: 'create-agent', agent: parseNewAgent(rest) };
+  }
+  throw new UsageError(`Unknown command: ${args.join(' ') || '(none)'}`);
 }
 
-/** Reads the agent id and the prompt from the command-line arguments; the words after the id form the prompt. */
-export function parseArgs(args: readonly string[]): AskArgs {
+// ask <agent-id> <prompt…>: the words after the id form the prompt.
+function parseAsk(args: readonly string[]): Command {
   const [agentId, ...words] = args;
   const prompt = words.join(' ').trim();
   if (agentId === undefined || agentId === '' || prompt === '') {
-    throw new UsageError();
+    throw new UsageError('ask needs an agent id and a prompt');
   }
-  return { agentId, prompt };
+  return { name: 'ask', agentId, prompt };
+}
+
+// agents create <agent-id> --harness … --instructions …: the name defaults to the id and the description to what the
+// agent runs on, since both are input the user may leave out.
+function parseNewAgent(args: readonly string[]): NewAgent {
+  const { values, positionals } = parseArgs({
+    args: [...args],
+    allowPositionals: true,
+    options: {
+      harness: { type: 'string' },
+      instructions: { type: 'string' },
+      name: { type: 'string' },
+      description: { type: 'string' },
+      model: { type: 'string' }
+    }
+  });
+  const [id, ...extra] = positionals;
+  const { harness, instructions, model } = values;
+  if (id === undefined || extra.length > 0 || harness === undefined || instructions === undefined) {
+    throw new UsageError('agents create needs one agent id, --harness and --instructions');
+  }
+  const name = values.name ?? id;
+  const description = values.description ?? `${name}, an agent on the ${harness} harness`;
+  return { id, name, description, harness, instructions, ...(model === undefined ? {} : { model }), skills: [] };
 }

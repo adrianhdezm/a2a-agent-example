@@ -1,6 +1,6 @@
 import { sendPrompt } from './a2a-request.ts';
-import { parseArgs } from './args.ts';
-import { findAgent } from './discovery.ts';
+import { agentsApi } from './agents-api.ts';
+import { parseCommand } from './args.ts';
 
 // The server's own PORT from the root .env; the client fails loudly without it, as the server does.
 const port = process.env.PORT;
@@ -8,10 +8,29 @@ if (port === undefined || port === '') {
   throw new Error('PORT is not set: add it to the root .env (see .env.example)');
 }
 
-const { agentId, prompt } = parseArgs(process.argv.slice(2));
-const agent = await findAgent(`http://localhost:${port}`, agentId);
-console.log(`Asking ${agent.name} (${agent.id}, ${agent.harness} harness)…`);
+const api = agentsApi(`http://localhost:${port}`);
+const command = parseCommand(process.argv.slice(2));
 
-const result = await sendPrompt(agent.cardUrl, prompt);
-console.log(`State: ${result.state}`);
-console.log(`Artifact:\n${result.artifactText}`);
+switch (command.name) {
+  case 'ask': {
+    const agent = await api.get(command.agentId);
+    console.log(`Asking ${agent.name} (${agent.id}, ${agent.harness} harness)…`);
+    const result = await sendPrompt(agent.cardUrl, command.prompt);
+    console.log(`State: ${result.state}`);
+    console.log(`Artifact:\n${result.artifactText}`);
+    break;
+  }
+  case 'list-agents': {
+    const page = await api.list();
+    for (const agent of page.items) {
+      console.log(`${agent.id}\t${agent.harness}\t${agent.name}`);
+    }
+    console.log(`${String(page.total)} agent(s)`);
+    break;
+  }
+  case 'create-agent': {
+    const agent = await api.create(command.agent);
+    console.log(`Created ${agent.id} on the ${agent.harness} harness; its card: ${agent.cardUrl}`);
+    break;
+  }
+}

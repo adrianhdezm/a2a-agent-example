@@ -16,7 +16,8 @@
     "format:check": "pnpm -r format:check",
     "dev:server": "pnpm --filter server dev",
     "start:server": "pnpm --filter server start",
-    "ask": "pnpm --filter client start"
+    "ask": "pnpm --filter client start ask",
+    "agents": "pnpm --filter client start agents"
   },
   "private": true
 }
