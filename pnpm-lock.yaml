@@ -236,18 +236,18 @@ importers:
 
   apps/server:
     dependencies:
-      '@a2a-agent-example/harness-a2a':
+      '@a2a-agent-example/a2a-bridge':
         specifier: workspace:*
-        version: link:../../packages/harness-a2a
-      '@a2a-agent-example/harness-claude':
+        version: link:../../packages/a2a-bridge
+      '@a2a-agent-example/claude-driver':
         specifier: workspace:*
-        version: link:../../packages/harness-claude
-      '@a2a-agent-example/harness-codex':
+        version: link:../../packages/claude-driver
+      '@a2a-agent-example/codex-driver':
         specifier: workspace:*
-        version: link:../../packages/harness-codex
-      '@a2a-agent-example/harness-core':
+        version: link:../../packages/codex-driver
+      '@a2a-agent-example/harness':
         specifier: workspace:*
-        version: link:../../packages/harness-core
+        version: link:../../packages/harness
       '@a2a-js/sdk':
         specifier: 'catalog:'
         version: 1.3.0(express@5.3.0)
@@ -307,11 +307,11 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
 
-  packages/harness-a2a:
+  packages/a2a-bridge:
     dependencies:
-      '@a2a-agent-example/harness-core':
+      '@a2a-agent-example/harness':
         specifier: workspace:*
-        version: link:../harness-core
+        version: link:../harness
       '@a2a-js/sdk':
         specifier: 'catalog:'
         version: 1.3.0(express@5.3.0)
@@ -338,11 +338,11 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
 
-  packages/harness-claude:
+  packages/claude-driver:
     dependencies:
-      '@a2a-agent-example/harness-core':
+      '@a2a-agent-example/harness':
         specifier: workspace:*
-        version: link:../harness-core
+        version: link:../harness
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.3.330
         version: 0.3.330(@anthropic-ai/sdk@1.12.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.2(zod@4.6.7))(zod@4.6.7)
@@ -369,11 +369,11 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
 
-  packages/harness-codex:
+  packages/codex-driver:
     dependencies:
-      '@a2a-agent-example/harness-core':
+      '@a2a-agent-example/harness':
         specifier: workspace:*
-        version: link:../harness-core
+        version: link:../harness
       '@openai/codex-sdk':
         specifier: ^0.171.0
         version: 0.171.0
@@ -400,7 +400,7 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
 
-  packages/harness-core:
+  packages/harness:
     devDependencies:
       '@a2a-agent-example/eslint-config':
         specifier: workspace:*

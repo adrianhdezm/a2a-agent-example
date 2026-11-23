@@ -1,5 +1,5 @@
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
 
 /** The session id a message announces: the `system`/`init` message carries it; any other message gives undefined. */
 export function claudeSessionId(message: SDKMessage): string | undefined {

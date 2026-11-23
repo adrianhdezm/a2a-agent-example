@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
-import { ClaudeHarness } from '@a2a-agent-example/harness-claude';
-import { CodexHarness } from '@a2a-agent-example/harness-codex';
-import { HarnessRegistry } from '@a2a-agent-example/harness-core';
+import { ClaudeHarness } from '@a2a-agent-example/claude-driver';
+import { CodexHarness } from '@a2a-agent-example/codex-driver';
+import { HarnessRegistry } from '@a2a-agent-example/harness';
 import { claudeCoderAgent } from './agents/claude-coder.agent.ts';
 import { codexCoderAgent } from './agents/codex-coder.agent.ts';
 import { createApp } from './app.ts';

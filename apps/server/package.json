@@ -29,10 +29,10 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@a2a-agent-example/harness-a2a": "workspace:*",
-    "@a2a-agent-example/harness-claude": "workspace:*",
-    "@a2a-agent-example/harness-codex": "workspace:*",
-    "@a2a-agent-example/harness-core": "workspace:*",
+    "@a2a-agent-example/a2a-bridge": "workspace:*",
+    "@a2a-agent-example/claude-driver": "workspace:*",
+    "@a2a-agent-example/codex-driver": "workspace:*",
+    "@a2a-agent-example/harness": "workspace:*",
     "@a2a-js/sdk": "catalog:",
     "cors": "^2.8.6",
     "express": "^5.3.0",

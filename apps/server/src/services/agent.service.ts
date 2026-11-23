@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
+import type { HarnessRegistry } from '@a2a-agent-example/harness';
 import { AgentError } from '../models/agent.model.ts';
 import type { Agent, AgentChanges, AgentInput, AgentSortField } from '../models/agent.model.ts';
 import type { ListParams, PaginatedResult } from '../models/list.model.ts';

@@ -1,5 +1,5 @@
 import type { Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
 import { describe, expect, it } from 'vitest';
 import { ClaudeSession } from '../src/claude-session.ts';
 import { assistantMessage, initMessage, sessionId, successResult } from './fixtures/claude-messages.ts';

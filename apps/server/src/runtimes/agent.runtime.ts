@@ -1,5 +1,5 @@
-import { HarnessExecutor } from '@a2a-agent-example/harness-a2a';
-import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
+import { HarnessExecutor } from '@a2a-agent-example/a2a-bridge';
+import type { HarnessRegistry } from '@a2a-agent-example/harness';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { agentCardHandler, jsonRpcHandler, UserBuilder } from '@a2a-js/sdk/server/express';
 import type { RequestHandler } from 'express';

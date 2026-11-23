@@ -1,11 +1,12 @@
 {
-  "name": "@a2a-agent-example/harness-a2a",
+  "name": "@a2a-agent-example/harness",
   "version": "0.0.0",
-  "description": "Exposes a harness session over A2A: an A2A SDK AgentExecutor that runs one harness turn per message.",
+  "description": "The harness abstraction: sessions, turns and the normalized events every coding-agent runtime emits.",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/fake-harness.ts"
   },
   "scripts": {
     "typecheck": "tsc -b",
@@ -22,9 +23,5 @@
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "dependencies": {
-    "@a2a-agent-example/harness-core": "workspace:*",
-    "@a2a-js/sdk": "catalog:"
   }
 }

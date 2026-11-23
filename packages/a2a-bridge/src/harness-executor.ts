@@ -2,7 +2,7 @@ import { TaskState } from '@a2a-js/sdk';
 import { TaskNotCancelableError } from '@a2a-js/sdk/errors';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
-import type { Harness, Session, SessionConfig, TurnEndedEvent } from '@a2a-agent-example/harness-core';
+import type { Harness, Session, SessionConfig, TurnEndedEvent } from '@a2a-agent-example/harness';
 import { messageText, resultArtifact, statusUpdate, submittedTask } from './a2a-message.ts';
 import type { TaskIds } from './a2a-message.ts';
 

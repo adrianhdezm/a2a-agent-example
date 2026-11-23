@@ -1,6 +1,6 @@
 import type { ThreadOptions } from '@openai/codex-sdk';
-import { Session } from '@a2a-agent-example/harness-core';
-import type { HarnessEvent, SessionConfig } from '@a2a-agent-example/harness-core';
+import { Session } from '@a2a-agent-example/harness';
+import type { HarnessEvent, SessionConfig } from '@a2a-agent-example/harness';
 import type { CodexClient, CodexThread, CreateCodexClient } from './codex-client.ts';
 import { codexThreadId, translateCodexEvent } from './codex-translation.ts';
 

@@ -1,7 +1,7 @@
 {
-  "name": "@a2a-agent-example/harness-claude",
+  "name": "@a2a-agent-example/codex-driver",
   "version": "0.0.0",
-  "description": "Harness driver for the Claude Agent SDK.",
+  "description": "Harness driver for the Codex SDK.",
   "private": true,
   "type": "module",
   "exports": {
@@ -24,7 +24,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@a2a-agent-example/harness-core": "workspace:*",
-    "@anthropic-ai/claude-agent-sdk": "^0.3.330"
+    "@a2a-agent-example/harness": "workspace:*",
+    "@openai/codex-sdk": "^0.171.0"
   }
 }

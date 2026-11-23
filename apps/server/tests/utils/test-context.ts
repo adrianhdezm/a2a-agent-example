@@ -1,6 +1,6 @@
-import { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
-import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
+import { HarnessRegistry } from '@a2a-agent-example/harness';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
+import { FakeHarness } from '@a2a-agent-example/harness/testing';
 import type { AppContext } from '../../src/models/app-context.model.ts';
 import { AgentRuntime } from '../../src/runtimes/agent.runtime.ts';
 import { AgentStore } from '../../src/stores/agent.store.ts';

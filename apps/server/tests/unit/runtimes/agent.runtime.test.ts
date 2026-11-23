@@ -1,5 +1,5 @@
-import { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
+import { HarnessRegistry } from '@a2a-agent-example/harness';
+import { FakeHarness } from '@a2a-agent-example/harness/testing';
 import { Role } from '@a2a-js/sdk';
 import type { SendMessageRequest, Task } from '@a2a-js/sdk';
 import { ServerCallContext } from '@a2a-js/sdk/server';

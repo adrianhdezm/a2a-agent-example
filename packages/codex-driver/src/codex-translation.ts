@@ -1,5 +1,5 @@
 import type { ThreadEvent } from '@openai/codex-sdk';
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
 
 /** The thread id an event announces: `thread.started` carries it; any other event gives undefined. */
 export function codexThreadId(event: ThreadEvent): string | undefined {

@@ -1,6 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { Harness } from '@a2a-agent-example/harness-core';
-import type { SessionConfig } from '@a2a-agent-example/harness-core';
+import { Harness } from '@a2a-agent-example/harness';
+import type { SessionConfig } from '@a2a-agent-example/harness';
 import { ClaudeSession } from './claude-session.ts';
 import type { ClaudeQuery } from './claude-session.ts';
 

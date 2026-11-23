@@ -1,6 +1,6 @@
 import type { Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { Session } from '@a2a-agent-example/harness-core';
-import type { HarnessEvent, SessionConfig } from '@a2a-agent-example/harness-core';
+import { Session } from '@a2a-agent-example/harness';
+import type { HarnessEvent, SessionConfig } from '@a2a-agent-example/harness';
 import { claudeSessionId, translateClaudeMessage } from './claude-translation.ts';
 
 /** The shape of the SDK's `query()` this driver uses, so tests can hand it recorded messages. */

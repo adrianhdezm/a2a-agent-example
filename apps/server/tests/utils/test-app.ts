@@ -1,5 +1,5 @@
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
-import type { FakeHarness } from '@a2a-agent-example/harness-core/testing';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
+import type { FakeHarness } from '@a2a-agent-example/harness/testing';
 import { createApp } from '../../src/app.ts';
 import { testContext } from './test-context.ts';
 import { listen } from './test-server.ts';

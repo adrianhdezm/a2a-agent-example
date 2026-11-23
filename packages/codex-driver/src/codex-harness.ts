@@ -1,6 +1,6 @@
 import { Codex } from '@openai/codex-sdk';
-import { Harness } from '@a2a-agent-example/harness-core';
-import type { SessionConfig } from '@a2a-agent-example/harness-core';
+import { Harness } from '@a2a-agent-example/harness';
+import type { SessionConfig } from '@a2a-agent-example/harness';
 import type { CreateCodexClient } from './codex-client.ts';
 import { CodexSession } from './codex-session.ts';
 

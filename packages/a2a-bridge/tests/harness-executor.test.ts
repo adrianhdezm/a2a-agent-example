@@ -1,8 +1,8 @@
 import { TaskState } from '@a2a-js/sdk';
 import type { TaskStatus } from '@a2a-js/sdk';
 import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
-import type { HarnessEvent } from '@a2a-agent-example/harness-core';
-import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
+import type { HarnessEvent } from '@a2a-agent-example/harness';
+import { FakeHarness } from '@a2a-agent-example/harness/testing';
 import { describe, expect, it } from 'vitest';
 import { HarnessExecutor } from '../src/harness-executor.ts';
 import { fakeEventBus } from './utils/fake-event-bus.ts';
