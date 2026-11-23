@@ -1,10 +1,10 @@
-import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import type { AgentRegistry } from '../registries/agent.registry.ts';
+import type { A2AEndpointRegistry } from '../registries/a2a-endpoint.registry.ts';
+import type { AgentService } from '../services/agent.service.ts';
 
 /** What the handlers use, built once by `server.ts` and stored on `app.locals.context`. */
 export interface AppContext {
-  agentRegistry: AgentRegistry;
-  harnessRegistry: HarnessRegistry;
-  /** The URL clients reach the server at; the Agent Cards and summaries point there. */
+  agentService: AgentService;
+  endpointRegistry: A2AEndpointRegistry;
+  /** The URL clients reach the server at; the Agent Cards and agent responses point there. */
   baseUrl: string;
 }

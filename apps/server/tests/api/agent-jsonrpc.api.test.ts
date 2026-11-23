@@ -2,8 +2,9 @@ import { Role, TaskState } from '@a2a-js/sdk';
 import type { Task } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { agentInput } from '../utils/agent-seed.ts';
 import { serveTestApp } from '../utils/test-app.ts';
-import type { TestServer } from '../utils/test-server.ts';
+import type { TestApp } from '../utils/test-app.ts';
 
 function userMessage(text: string) {
   return {
@@ -24,7 +25,7 @@ function userMessage(text: string) {
 }
 
 describe('POST /agents/:id/a2a/jsonrpc', () => {
-  let server: TestServer;
+  let server: TestApp;
 
   beforeAll(async () => {
     server = await serveTestApp([
@@ -54,16 +55,23 @@ describe('POST /agents/:id/a2a/jsonrpc', () => {
     ]);
   });
 
-  it('keeps the A2A context of a task for the next message', async () => {
-    const client = await new ClientFactory().createFromUrl(`${server.baseUrl}/agents/first-coder/.well-known/agent-card.json`, '');
-    const first = (await client.sendMessage(userMessage('Write hello.py'))) as Task;
+  it('answers SendMessage for an agent created at runtime, and goes on with its changed instructions', async () => {
+    // Arrange
+    const headers = { 'Content-Type': 'application/json' };
+    await fetch(`${server.baseUrl}/agents`, { method: 'POST', headers, body: JSON.stringify(agentInput({ id: 'reviewer' })) });
+    const client = await new ClientFactory().createFromUrl(`${server.baseUrl}/agents/reviewer/.well-known/agent-card.json`, '');
+    const first = (await client.sendMessage(userMessage('Review hello.py'))) as Task;
 
-    const followUp = userMessage('Now add a test');
+    // Act
+    await fetch(`${server.baseUrl}/agents/reviewer`, { method: 'PATCH', headers, body: JSON.stringify({ instructions: 'Be strict.' }) });
+    const followUp = userMessage('And the tests?');
     followUp.message.contextId = first.contextId;
     const second = (await client.sendMessage(followUp)) as Task;
 
+    // Assert
+    expect(second.status?.state).toBe(TaskState.TASK_STATE_COMPLETED);
     expect(second.contextId).toBe(first.contextId);
-    expect(second.id).not.toBe(first.id);
+    expect(server.harness.resumed.at(-1)?.config).toMatchObject({ workspace: '/srv/workspaces/reviewer', instructions: 'Be strict.' });
   });
 
   it('answers malformed JSON with a JSON-RPC parse error, not the server error shape', async () => {

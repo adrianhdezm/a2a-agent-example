@@ -1,5 +1,5 @@
 import { AGENT_CARD_PATH } from '@a2a-js/sdk';
-import type { AgentDefinition, AgentSummary } from '../models/agent.model.ts';
+import type { Agent, AgentResponse } from '../models/agent.model.ts';
 
 /** Where an agent's endpoints live on the server, relative to its base URL. */
 export interface AgentPaths {
@@ -21,7 +21,7 @@ export function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}${path}`;
 }
 
-export function summarizeAgent(definition: AgentDefinition, baseUrl: string): AgentSummary {
-  const { id, name, description, harness } = definition;
-  return { id, name, description, harness, cardUrl: joinUrl(baseUrl, agentPaths(id).card) };
+/** An agent as the API answers it, with the URL of its card. */
+export function toAgentResponse(agent: Agent, baseUrl: string): AgentResponse {
+  return { ...agent, cardUrl: joinUrl(baseUrl, agentPaths(agent.id).card) };
 }

@@ -1,57 +1,87 @@
-import { HarnessRegistry, UnknownHarnessError } from '@a2a-agent-example/harness-core';
-import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
 import { AgentRegistry } from '../../../src/registries/agent.registry.ts';
-import { agentDefinition } from '../../utils/agent-definition-seed.ts';
+import { agent, instant } from '../../utils/agent-seed.ts';
 
-function registryWithFakeHarness(): AgentRegistry {
-  const harnesses = new HarnessRegistry();
-  harnesses.register(new FakeHarness('fake', []));
-  return new AgentRegistry(harnesses);
+const firstPage = { page: 1, pageSize: 20, sortField: 'createdAt', sortDirection: 'ASC' } as const;
+
+function registryWith(...agents: ReturnType<typeof agent>[]): AgentRegistry {
+  const registry = new AgentRegistry();
+  for (const stored of agents) {
+    registry.create(stored);
+  }
+  return registry;
 }
 
 describe('AgentRegistry', () => {
-  it('returns a registered agent by id and lists agents in registration order', () => {
-    const registry = registryWithFakeHarness();
-    const first = agentDefinition({ id: 'claude-coder' });
-    const second = agentDefinition({ id: 'codex-coder' });
+  it('returns a created agent by id', () => {
+    const stored = agent();
 
-    registry.register(first);
-    registry.register(second);
-
-    expect(registry.get('codex-coder')).toBe(second);
-    expect(registry.list()).toEqual([first, second]);
+    expect(registryWith(stored).get('claude-coder')).toBe(stored);
   });
 
   it('rejects a second agent under an id already taken', () => {
-    const registry = registryWithFakeHarness();
-    registry.register(agentDefinition());
+    const registry = registryWith(agent());
 
     expect(() => {
-      registry.register(agentDefinition());
-    }).toThrow(expect.objectContaining({ name: 'AgentRegistryError', reason: 'duplicate-id', agentId: 'claude-coder' }));
+      registry.create(agent());
+    }).toThrow(expect.objectContaining({ name: 'AgentError', reason: 'duplicate-id', agentId: 'claude-coder' }));
   });
 
-  it('rejects an agent whose harness is not registered', () => {
-    const registry = registryWithFakeHarness();
-
+  it.each([
+    ['get', (registry: AgentRegistry) => registry.get('missing')],
+    [
+      'update',
+      (registry: AgentRegistry) => {
+        registry.update(agent({ id: 'missing' }));
+      }
+    ],
+    [
+      'delete',
+      (registry: AgentRegistry) => {
+        registry.delete('missing');
+      }
+    ]
+  ])('throws an unknown-id error from %s for an id no agent has', (_method, call) => {
     expect(() => {
-      registry.register(agentDefinition({ harness: 'missing' }));
-    }).toThrow(UnknownHarnessError);
-    expect(registry.list()).toEqual([]);
+      call(new AgentRegistry());
+    }).toThrow(expect.objectContaining({ reason: 'unknown-id', agentId: 'missing' }));
   });
 
-  it.each(['Claude-Coder', 'claude coder', 'claude--coder', '-claude', 'claude/coder', ''])('rejects the id %j as not URL-safe', (id) => {
-    const registry = registryWithFakeHarness();
+  it('replaces an agent on update and forgets it on delete', () => {
+    const registry = registryWith(agent());
 
-    expect(() => {
-      registry.register(agentDefinition({ id }));
-    }).toThrow(expect.objectContaining({ name: 'AgentRegistryError', reason: 'invalid-id', agentId: id }));
+    registry.update(agent({ instructions: 'Write tests first.' }));
+    expect(registry.get('claude-coder').instructions).toBe('Write tests first.');
+
+    registry.delete('claude-coder');
+    expect(registry.list(firstPage).total).toBe(0);
   });
 
-  it('throws an unknown-id error for an id that is not registered', () => {
-    expect(() => registryWithFakeHarness().get('missing')).toThrow(
-      expect.objectContaining({ name: 'AgentRegistryError', reason: 'unknown-id', message: 'No agent is registered as "missing"' })
+  describe('list', () => {
+    const registry = registryWith(
+      agent({ id: 'bravo', name: 'Alpha', createdAt: instant(2) }),
+      agent({ id: 'alpha', name: 'Charlie', createdAt: instant(1) }),
+      agent({ id: 'charlie', name: 'Alpha', createdAt: instant(3) })
     );
+
+    it.each([
+      ['createdAt', 'ASC', ['alpha', 'bravo', 'charlie']],
+      ['createdAt', 'DESC', ['charlie', 'bravo', 'alpha']],
+      ['id', 'DESC', ['charlie', 'bravo', 'alpha']],
+      ['name', 'ASC', ['bravo', 'charlie', 'alpha']]
+    ] as const)('sorts by %s %s, the id breaking ties', (sortField, sortDirection, ids) => {
+      expect(registry.list({ ...firstPage, sortField, sortDirection }).items.map(({ id }) => id)).toEqual(ids);
+    });
+
+    it('answers one page with the totals of the whole list', () => {
+      const page = registry.list({ ...firstPage, page: 2, pageSize: 2 });
+
+      expect(page).toMatchObject({ total: 3, page: 2, pageSize: 2, totalPages: 2 });
+      expect(page.items.map(({ id }) => id)).toEqual(['charlie']);
+    });
+
+    it('answers an empty page past the end', () => {
+      expect(registry.list({ ...firstPage, page: 5 })).toMatchObject({ items: [], total: 3, totalPages: 1 });
+    });
   });
 });

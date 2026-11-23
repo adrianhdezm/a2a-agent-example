@@ -6,13 +6,13 @@ import type { Harness, Session, TurnEndedEvent } from '@a2a-agent-example/harnes
 import { messageText, resultArtifact, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
 import type { TaskIds } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../logger.ts';
-import type { AgentDefinition } from '../models/agent.model.ts';
+import type { Agent } from '../models/agent.model.ts';
 
 /** Where the executor keeps the harness session id of each A2A context. A `Map` is the in-memory one. */
 export type SessionIdStore = Pick<Map<string, string>, 'get' | 'set'>;
 
 export interface HarnessExecutorOptions {
-  agent: AgentDefinition;
+  agent: Agent;
   harness: Harness;
   sessions: SessionIdStore;
 }
@@ -27,7 +27,7 @@ interface TurnResult {
  * `contextId`, published as submitted → working (with each agent message) → a `result` artifact → completed or failed.
  */
 export class HarnessExecutor implements AgentExecutor {
-  readonly #agent: AgentDefinition;
+  readonly #agent: Agent;
   readonly #harness: Harness;
   readonly #sessions: SessionIdStore;
 

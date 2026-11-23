@@ -5,7 +5,7 @@ import type { HarnessEvent } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
 import { HarnessExecutor } from '../../../src/executors/harness.executor.ts';
-import { agentDefinition } from '../../utils/agent-definition-seed.ts';
+import { agent } from '../../utils/agent-seed.ts';
 import { fakeEventBus } from '../../utils/fake-event-bus.ts';
 import { requestContext } from '../../utils/request-context-seed.ts';
 
@@ -41,7 +41,7 @@ describe('HarnessExecutor', () => {
   it('publishes submitted, working, the result artifact and completed for a completed turn', async () => {
     // Arrange
     const harness = new FakeHarness('fake', completedTurn);
-    const executor = new HarnessExecutor({ agent: agentDefinition(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act
@@ -61,18 +61,18 @@ describe('HarnessExecutor', () => {
 
   it('runs the turn with the text of the user message in the agent workspace', async () => {
     const harness = new FakeHarness('fake', completedTurn);
-    const agent = agentDefinition();
-    const executor = new HarnessExecutor({ agent, harness, sessions: new Map() });
+    const definition = agent();
+    const executor = new HarnessExecutor({ agent: definition, harness, sessions: new Map() });
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
 
-    expect(harness.started).toEqual([{ workspace: agent.workspace, instructions: agent.instructions, model: undefined }]);
+    expect(harness.started).toEqual([{ workspace: definition.workspace, instructions: definition.instructions, model: undefined }]);
     expect(harness.sessions[0]?.inputs).toEqual(['Write hello.py']);
   });
 
   it('carries each agent message on a working status update', async () => {
     const executor = new HarnessExecutor({
-      agent: agentDefinition(),
+      agent: agent(),
       harness: new FakeHarness('fake', completedTurn),
       sessions: new Map()
     });
@@ -87,7 +87,7 @@ describe('HarnessExecutor', () => {
 
   it('ends the task failed, with the error as the artifact, for a failed turn', async () => {
     const harness = new FakeHarness('fake', [{ type: 'turn.ended', outcome: 'failed', error: 'invalid x-api-key' }]);
-    const executor = new HarnessExecutor({ agent: agentDefinition(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
     const { bus, events, finishedCalls } = fakeEventBus();
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), bus);
@@ -103,7 +103,7 @@ describe('HarnessExecutor', () => {
       { type: 'agent.message', text: 'Second' },
       { type: 'turn.ended', outcome: 'completed' }
     ]);
-    const executor = new HarnessExecutor({ agent: agentDefinition(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
     const { bus, events } = fakeEventBus();
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), bus);
@@ -115,7 +115,7 @@ describe('HarnessExecutor', () => {
     // Arrange
     const harness = new FakeHarness('fake', completedTurn);
     const sessions = new Map<string, string>();
-    const executor = new HarnessExecutor({ agent: agentDefinition(), harness, sessions });
+    const executor = new HarnessExecutor({ agent: agent(), harness, sessions });
 
     // Act
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
@@ -129,7 +129,7 @@ describe('HarnessExecutor', () => {
 
   it('starts a separate session for another context', async () => {
     const harness = new FakeHarness('fake', completedTurn);
-    const executor = new HarnessExecutor({ agent: agentDefinition(), harness, sessions: new Map() });
+    const executor = new HarnessExecutor({ agent: agent(), harness, sessions: new Map() });
 
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-1', contextId: 'context-1' }), fakeEventBus().bus);
     await executor.execute(requestContext('Write hello.py', { taskId: 'task-2', contextId: 'context-2' }), fakeEventBus().bus);

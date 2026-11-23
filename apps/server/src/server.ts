@@ -1,4 +1,3 @@
-import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ClaudeHarness } from '@a2a-agent-example/harness-claude';
 import { CodexHarness } from '@a2a-agent-example/harness-codex';
@@ -6,10 +5,11 @@ import { HarnessRegistry } from '@a2a-agent-example/harness-core';
 import { claudeCoderAgent } from './agents/claude-coder.agent.ts';
 import { codexCoderAgent } from './agents/codex-coder.agent.ts';
 import { createApp } from './app.ts';
-import { summarizeAgent } from './helpers/agent-url.helper.ts';
 import { readConfig } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
+import { A2AEndpointRegistry } from './registries/a2a-endpoint.registry.ts';
 import { AgentRegistry } from './registries/agent.registry.ts';
+import { AgentService } from './services/agent.service.ts';
 
 // A generous bound on model round trips per harness turn, so a confused agent stops instead of looping.
 const claudeMaxTurns = 30;
@@ -20,21 +20,26 @@ const harnessRegistry = new HarnessRegistry();
 harnessRegistry.register(new ClaudeHarness({ apiKey: config.anthropicApiKey, maxTurns: claudeMaxTurns }));
 harnessRegistry.register(new CodexHarness({ apiKey: config.codexApiKey }));
 
-const workspacesDir = resolve(import.meta.dirname, '../workspaces');
-const agentRegistry = new AgentRegistry(harnessRegistry);
-agentRegistry.register(claudeCoderAgent(workspacesDir));
-agentRegistry.register(codexCoderAgent(workspacesDir));
-await Promise.all(agentRegistry.list().map((agent) => mkdir(agent.workspace, { recursive: true })));
-
 const baseUrl = `http://localhost:${String(config.port)}`;
-const server = createApp({ agentRegistry, harnessRegistry, baseUrl }).listen(config.port, (error) => {
+const endpointRegistry = new A2AEndpointRegistry({ harnessRegistry, baseUrl });
+const agentService = new AgentService({
+  agentRegistry: new AgentRegistry(),
+  endpointRegistry,
+  harnessRegistry,
+  workspacesDir: resolve(import.meta.dirname, '../workspaces')
+});
+
+// The agents the server starts with; clients create the others through POST /agents.
+const startingAgents = await Promise.all([claudeCoderAgent, codexCoderAgent].map((input) => agentService.create(input)));
+for (const agent of startingAgents) {
+  logger.info({ agent: agent.id, harness: agent.harness, workspace: agent.workspace }, 'agent created');
+}
+
+const server = createApp({ agentService, endpointRegistry, baseUrl }).listen(config.port, (error) => {
   if (error) {
     throw error;
   }
   logger.info({ baseUrl }, 'A2A agent server listening');
-  for (const agent of agentRegistry.list()) {
-    logger.info({ agent: agent.id, harness: agent.harness, cardUrl: summarizeAgent(agent, baseUrl).cardUrl }, 'agent mounted');
-  }
 });
 
 // Stop taking requests, let the open ones (running turns among them) finish, then exit.

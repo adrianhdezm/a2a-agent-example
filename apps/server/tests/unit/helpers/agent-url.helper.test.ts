@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { agentPaths, joinUrl, summarizeAgent } from '../../../src/helpers/agent-url.helper.ts';
-import { agentDefinition } from '../../utils/agent-definition-seed.ts';
+import { agentPaths, joinUrl, toAgentResponse } from '../../../src/helpers/agent-url.helper.ts';
+import { agent } from '../../utils/agent-seed.ts';
 
 describe('agent-url.helper', () => {
   it('puts every endpoint of an agent under /agents/<id>', () => {
@@ -15,12 +15,9 @@ describe('agent-url.helper', () => {
     expect(joinUrl(baseUrl, '/agents')).toBe('http://localhost:4000/agents');
   });
 
-  it('summarizes an agent with the URL of its card', () => {
-    expect(summarizeAgent(agentDefinition(), 'http://localhost:4000')).toEqual({
-      id: 'claude-coder',
-      name: 'Claude Coder',
-      description: 'Writes and edits code in its workspace.',
-      harness: 'fake',
+  it('answers an agent with the URL of its card', () => {
+    expect(toAgentResponse(agent(), 'http://localhost:4000')).toEqual({
+      ...agent(),
       cardUrl: 'http://localhost:4000/agents/claude-coder/.well-known/agent-card.json'
     });
   });

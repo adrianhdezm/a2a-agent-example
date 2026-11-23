@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildAgentCard } from '../../../src/helpers/agent-card.helper.ts';
-import { agentDefinition } from '../../utils/agent-definition-seed.ts';
+import { agent } from '../../utils/agent-seed.ts';
 
 describe('buildAgentCard', () => {
   it('describes the agent with one JSON-RPC interface on protocol 1.0 at its own endpoint', () => {
-    const card = buildAgentCard(agentDefinition(), 'http://localhost:4000');
+    const card = buildAgentCard(agent(), 'http://localhost:4000');
 
     expect(card).toMatchObject({ name: 'Claude Coder', description: 'Writes and edits code in its workspace.' });
     expect(card.supportedInterfaces).toEqual([
@@ -13,7 +13,7 @@ describe('buildAgentCard', () => {
   });
 
   it('advertises each skill of the definition with text in and out', () => {
-    const card = buildAgentCard(agentDefinition(), 'http://localhost:4000');
+    const card = buildAgentCard(agent(), 'http://localhost:4000');
 
     expect(card.skills).toEqual([
       {
@@ -30,7 +30,7 @@ describe('buildAgentCard', () => {
   });
 
   it('declares no streaming and no push notifications', () => {
-    const card = buildAgentCard(agentDefinition(), 'http://localhost:4000');
+    const card = buildAgentCard(agent(), 'http://localhost:4000');
 
     expect(card.capabilities).toMatchObject({ streaming: false, pushNotifications: false });
   });

@@ -1,12 +1,12 @@
 import { A2A_PROTOCOL_VERSION } from '@a2a-js/sdk';
 import type { AgentCard } from '@a2a-js/sdk';
-import type { AgentDefinition } from '../models/agent.model.ts';
+import type { Agent } from '../models/agent.model.ts';
 import { agentPaths, joinUrl } from './agent-url.helper.ts';
 
 const textModes = ['text/plain'];
 
 /** The A2A 1.0 Agent Card of one agent served under `baseUrl`, with its one JSON-RPC interface. */
-export function buildAgentCard(definition: AgentDefinition, baseUrl: string): AgentCard {
+export function buildAgentCard(definition: Agent, baseUrl: string): AgentCard {
   return {
     name: definition.name,
     description: definition.description,

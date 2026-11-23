@@ -1,5 +1,4 @@
-import { join } from 'node:path';
-import type { AgentDefinition } from '../models/agent.model.ts';
+import type { AgentInput } from '../models/agent.model.ts';
 
 /** Who a coding agent is; everything else it shares with the other coding agents. */
 export interface CodingAgentIdentity {
@@ -14,12 +13,11 @@ const instructions = [
   'Write and edit the files the user asks for there, keep changes small, and end with a short summary of what you did.'
 ].join(' ');
 
-/** A coding agent with the shared instructions and skill, working in `<workspacesDir>/<id>`. */
-export function codingAgent(identity: CodingAgentIdentity, workspacesDir: string): AgentDefinition {
+/** A coding agent with the shared instructions and write-code skill. */
+export function codingAgent(identity: CodingAgentIdentity): AgentInput {
   return {
     ...identity,
     instructions,
-    workspace: join(workspacesDir, identity.id),
     skills: [
       {
         id: 'write-code',

@@ -1,47 +1,53 @@
-import { UnknownHarnessError } from '@a2a-agent-example/harness-core';
-import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import { AgentRegistryError } from '../models/agent.model.ts';
-import type { AgentDefinition } from '../models/agent.model.ts';
+import { AgentError } from '../models/agent.model.ts';
+import type { Agent, AgentSortField } from '../models/agent.model.ts';
+import type { ListParams, PaginatedResult } from '../models/list.model.ts';
 
-const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/** The agents the server exposes, by id, each checked against the harnesses it can run on. */
+/** The agents, kept in memory by id: the agents' data layer. It stores what it is given and checks only ids. */
 export class AgentRegistry {
-  readonly #harnesses: HarnessRegistry;
-  readonly #agents = new Map<string, AgentDefinition>();
+  readonly #agents = new Map<string, Agent>();
 
-  constructor(harnesses: HarnessRegistry) {
-    this.#harnesses = harnesses;
+  /** Stores a new agent; throws an `AgentError` (`duplicate-id`) for an id already taken. */
+  create(agent: Agent): void {
+    if (this.#agents.has(agent.id)) {
+      throw new AgentError({ reason: 'duplicate-id', agentId: agent.id });
+    }
+    this.#agents.set(agent.id, agent);
   }
 
-  /**
-   * Adds an agent. Throws an `AgentRegistryError` for an id that is not a slug (`invalid-id`) or is already taken
-   * (`duplicate-id`), and harness-core's `UnknownHarnessError` for a harness the harness registry does not hold.
-   */
-  register(definition: AgentDefinition): void {
-    if (!slug.test(definition.id)) {
-      throw new AgentRegistryError({ reason: 'invalid-id', agentId: definition.id });
+  /** Returns the agent with `id`; throws an `AgentError` (`unknown-id`) if there is none. */
+  get(id: string): Agent {
+    const agent = this.#agents.get(id);
+    if (agent === undefined) {
+      throw new AgentError({ reason: 'unknown-id', agentId: id });
     }
-    if (this.#agents.has(definition.id)) {
-      throw new AgentRegistryError({ reason: 'duplicate-id', agentId: definition.id });
-    }
-    if (!this.#harnesses.has(definition.harness)) {
-      throw new UnknownHarnessError(definition.harness);
-    }
-    this.#agents.set(definition.id, definition);
+    return agent;
   }
 
-  /** Returns the agent registered as `id`; throws an `AgentRegistryError` (`unknown-id`) if there is none. */
-  get(id: string): AgentDefinition {
-    const definition = this.#agents.get(id);
-    if (definition === undefined) {
-      throw new AgentRegistryError({ reason: 'unknown-id', agentId: id });
-    }
-    return definition;
+  /** One page of the agents, sorted by `sortField` with the id as tie-breaker. */
+  list({ page, pageSize, sortField, sortDirection }: ListParams<AgentSortField>): PaginatedResult<Agent> {
+    const direction = sortDirection === 'ASC' ? 1 : -1;
+    const sorted = [...this.#agents.values()].sort(
+      (a, b) => direction * a[sortField].localeCompare(b[sortField]) || a.id.localeCompare(b.id)
+    );
+    const start = (page - 1) * pageSize;
+    return {
+      items: sorted.slice(start, start + pageSize),
+      total: sorted.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(sorted.length / pageSize)
+    };
   }
 
-  /** Every registered agent, in registration order. */
-  list(): AgentDefinition[] {
-    return [...this.#agents.values()];
+  /** Replaces a stored agent; throws an `AgentError` (`unknown-id`) if there is none with its id. */
+  update(agent: Agent): void {
+    this.get(agent.id);
+    this.#agents.set(agent.id, agent);
+  }
+
+  /** Removes an agent; throws an `AgentError` (`unknown-id`) if there is none with `id`. */
+  delete(id: string): void {
+    this.get(id);
+    this.#agents.delete(id);
   }
 }
