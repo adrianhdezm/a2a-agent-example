@@ -1,0 +1,10 @@
+{
+  // Extends the app project: only the file set and the JavaScript switches differ.
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
+  },
+  "include": ["tests", "eslint.config.js"]
+}

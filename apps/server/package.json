@@ -1,0 +1,35 @@
+{
+  "name": "@a2a-agent-example/server",
+  "version": "0.0.0",
+  "description": "A2A server that exposes each registered agent as its own A2A 1.0 endpoint.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=../../.env src/main.ts",
+    "dev": "node --import=tsx --watch --env-file=../../.env src/main.ts",
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "tsx": "^4.23.15",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-agent-example/agent-registry": "workspace:*",
+    "@a2a-agent-example/harness-claude": "workspace:*",
+    "@a2a-agent-example/harness-codex": "workspace:*",
+    "@a2a-agent-example/harness-core": "workspace:*",
+    "@a2a-js/sdk": "catalog:",
+    "express": "^5.3.0"
+  }
+}
