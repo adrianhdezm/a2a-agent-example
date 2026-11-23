@@ -1,7 +1,7 @@
 import { Role } from '@a2a-js/sdk';
 import type { Message } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
-import { messageText, resultArtifact, textPart } from '../src/a2a-events.ts';
+import { messageText, resultArtifact, textPart } from '../../src/a2a-events.ts';
 
 const ids = { taskId: 'task-1', contextId: 'context-1' };
 

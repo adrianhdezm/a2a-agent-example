@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentPaths, joinUrl } from '../src/agent-paths.ts';
+import { agentPaths, joinUrl } from '../../src/agent-paths.ts';
 
 describe('agent-paths', () => {
   it('puts every endpoint of an agent under /agents/<id>', () => {

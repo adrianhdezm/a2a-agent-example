@@ -1,23 +1,57 @@
 # Coding Conventions
 
-How this project is built and how to change it: a Node package project, following the
-`consult-stack-knowledge` skill's blueprint for that stack. It is the working guide for everyone who changes the code, people and agents
+How this project is built and how to change it: an A2A agent server monorepo project, following the
+`consult-stack-knowledge` docs it was built from. It is the working guide for everyone who changes the code, people and agents
 alike. The code follows every rule here; a change that breaks one changes this file in the same commit.
 
 ## Contents
 
+- [This project](#this-project)
 - [Node package](#node-package)
 - [Code style](#code-style)
 - [pnpm](#pnpm)
 - [TypeScript](#typescript)
+- [REST API](#rest-api)
+- [Testing](#testing)
 - [Node](#node)
 - [Node + TypeScript](#node--typescript)
+- [Express](#express)
+- [Pino](#pino)
+- [Express + Pino](#express--pino)
 - [ESLint](#eslint)
 - [TypeScript + ESLint](#typescript--eslint)
 - [Prettier](#prettier)
 - [ESLint + Prettier](#eslint--prettier)
-- [Testing](#testing)
 - [Vitest](#vitest)
+
+## This project
+
+What the docs below do not say about this workspace, and every place it departs from them, with the reason.
+
+### Workspace
+
+| Path                                        | Is                                                         | Follows                                                                          |
+| ------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `tooling/tsconfig`, `tooling/eslint-config` | the shared compiler options and ESLint rules               | Node package, Growing into a workspace                                           |
+| `packages/harness-*`                        | libraries with no entry point; each exports `src/index.ts` | Node package                                                                     |
+| `apps/client`                               | the smoke-test CLI; entry point `src/main.ts`              | Node package                                                                     |
+| `apps/server`                               | the A2A server; entry point `src/server.ts`                | Node package, plus Express, Pino, Express + Pino and REST API for its own routes |
+
+### Commands
+
+From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check` are the required checks; `pnpm test:integration` runs the server's API tests; `pnpm dev:server`, `pnpm start:server` and `pnpm ask <agent-id> "<prompt>"` run the server and the client.
+
+### Exceptions
+
+- **The server's entry point is `src/server.ts`**, the Express doc's composition root; the Node package Layout's `src/main.ts` is the client's. Either way it is the one file with side effects.
+- **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.
+- **The A2A endpoints are the SDK's routers**, mounted with `app.use` at `/agents/<id>/.well-known/agent-card.json` and `/agents/<id>/a2a/jsonrpc`. Their requests, answers and errors follow the A2A 1.0 spec (JSON-RPC errors), not the REST API rules, which govern the server's own routes (`GET /agents`, `GET /health`) and the not-found answer.
+- **No app-wide `express.json()`**: the JSON-RPC router parses its own body and must answer malformed JSON as a JSON-RPC parse error; the server's own routes take no body.
+- **`GET /agents` answers a plain array**, not the REST API list envelope: the agents come from configuration and are few. It moves to the list format when they come from a store.
+- **`GET /health` probes nothing yet**: the server has no dependency; a persistent store adds its key.
+- **Error classes live in `src/errors/`** (Node package), not under `models/` (Express).
+- **Server tests are split by tier**: `tests/unit/` mirrors `src/` and runs in `pnpm test`; `tests/api/` drives the endpoints over HTTP on an ephemeral port and runs in `pnpm test:integration`. It needs no database, keys or network. The other packages keep `tests/<module>.test.ts`.
+- **The shared harness fake is a subpath export**, `@a2a-agent-example/harness-core/testing`, since fakes used by several packages cannot live in one package's test utilities.
 
 ## Node package
 
@@ -93,6 +127,36 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 - **No `enum`, `namespace`, parameter properties or `import x = require()`**: use `as const` objects and unions.
 - **Never write a type that mirrors a generated file**: infer it.
 
+## REST API
+
+- **Resources are plural nouns and methods carry the verb**: `GET` list and read, `POST` create (201), `PATCH` partial
+  update, `DELETE` (204, no body).
+- **Every error answers `{ status: 'error', message }`** from one error handler; a client error's message is shown, an
+  unexpected one's hidden and logged.
+- **Every input is validated at the edge against a strict schema**; anything unknown is a 400.
+- **Handlers validate, call the data layer and shape the answer**; a missing resource is a 404.
+- **Every list speaks one format**: `?filter=<json>&sortField=…&sortDirection=ASC|DESC&page=…&pageSize=…` in,
+  `{ items, total, page, pageSize, totalPages }` out.
+- **Dates travel as ISO-8601 strings, ids are UUIDs, absence is `null`.**
+- **A change to the API's types changes its clients' types in the same commit.**
+- **A new route gets a handler test and a case in its resource's API test.**
+
+## Testing
+
+- **Test a behaviour once, at the cheapest tier that can see it**; a higher tier covers only what the lower one cannot
+  see.
+- **No test for wiring without logic, or for what the compiler enforces**; a caller tests its own branches, not its
+  callee's rules.
+- **One top-level group per file, named for the module; each case a present-tense behaviour sentence; one behaviour per
+  case**, cases that differ only in data table-driven.
+- **Arrange, act, assert**, marked once a phase has more than one line.
+- **Fakes are small and hand-written; shared ones live in the test utilities.**
+- **Each test owns its data**: cleared before each test, seeded with fixed timestamps; end to end on its own database
+  and ports, through the real API, with unique names.
+- **Integration tests run on the production engine.**
+- **UI tests query by role and accessible name.**
+- **`test` runs the fast tier only**; run the slower tier that covers a change before merging it.
+
 ## Node
 
 - **Node 24 or newer.** ([Node.js release schedule](https://github.com/nodejs/release#release-schedule))
@@ -105,6 +169,61 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 - **Code Node runs as TypeScript imports with the `.ts` extension**, keeps type imports in their own `import type`
   statement, and avoids syntax Node cannot strip.
 - **Code compiled by `tsc` for Node imports with the `.js` extension.**
+
+## Express
+
+### Architecture
+
+```
+request ─► request log ─► cors ─► express.json() ─► route ─► controller
+errors:  next(err) ─► notFoundHandler ─► errorHandler ─► { status: 'error', message }
+```
+
+- **`server.ts` is the composition root**: it builds the context, starts the listener and shuts down cleanly.
+- **`app.ts` is a pure factory**: the context goes on `app.locals.context` once, handlers mount directly on the app
+  (no routers), and nothing in it reads the environment.
+
+### Building blocks
+
+| Block      | Lives in                                       | Is                                              | Must not                                                   |
+| ---------- | ---------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| controller | `controllers/<resource>.controller.ts`         | one exported `async (req, res, next)` per route | reach a dependency except through `req.app.locals.context` |
+| middleware | `middlewares/<name>.middleware.ts`             | `errorHandler` (terminal) and `notFoundHandler` | call a DAO                                                 |
+| context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext` and its typing on `Express.Locals` | —                                                          |
+| helper     | `helpers/<name>.helper.ts`                     | transport-agnostic functions                    | take an Express `Request`                                  |
+| model      | `models/<name>.model.ts`                       | types and error classes                         | contain logic                                              |
+
+### Controllers and errors
+
+- **Every handler has one shape**: `async (req, res, next): Promise<void>` with `try { … } catch (err) { next(err) }`.
+- **Every input is validated inline with `safeParse`**; a failure throws `createError(400, …, { expose: true, cause })`.
+  There are no shared validation helpers, so each handler shows every error it can produce.
+- **Errors leave a handler only through `next(err)`**; `errorHandler` writes `{ status: 'error', message }`, the message
+  only when the error is exposed.
+- **Naming**: handlers are verb + resource (`listEntities`, `getEntity`), never `entityController`; middlewares end in
+  `Handler`. Folders are plural, files keep the singular suffix (`controllers/entity.controller.ts`).
+
+### Testing the API
+
+- **Unit tests call handlers and middlewares as functions**, with a mock request (a stub context on
+  `req.app.locals.context`), a spy response and a spy next from the test utilities. They assert the response or the
+  error passed to `next`, and what the DAO received; every 400 also asserts the DAO was never called. No app, no
+  server.
+- **API tests serve the real app on an ephemeral port**, on the real DAO and a real database, and drive it over
+  `fetch`: every route's happy path, the errors only the real stack produces, and what `app.ts` adds
+  (malformed JSON → 400, over 100 kB → 413, an unmatched path → 404 in the standard shape).
+
+## Pino
+
+- **One logger in `src/logger.ts`**, writing JSON to stdout; nothing else creates one.
+- **The level comes from `LOG_LEVEL`**: `debug` by default, `info` in production, `silent` in tests.
+- **Errors are logged as `{ err }`** with a short message.
+- **Pretty output is a pipe in the `dev` script only**, never an import or a transport.
+
+## Express + Pino
+
+- **Every request is logged by `pino-http`**, the first middleware, on the one logger.
+- **Errors are logged once, by `errorHandler`, through `req.log`**: 5xx at `error`, 4xx at `warn`.
 
 ## ESLint
 
@@ -135,22 +254,6 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 
 - **Formatting problems never reach `pnpm lint`**: `eslint-config-prettier` sits between the presets and the shared
   rules.
-
-## Testing
-
-- **Test a behaviour once, at the cheapest tier that can see it**; a higher tier covers only what the lower one cannot
-  see.
-- **No test for wiring without logic, or for what the compiler enforces**; a caller tests its own branches, not its
-  callee's rules.
-- **One top-level group per file, named for the module; each case a present-tense behaviour sentence; one behaviour per
-  case**, cases that differ only in data table-driven.
-- **Arrange, act, assert**, marked once a phase has more than one line.
-- **Fakes are small and hand-written; shared ones live in the test utilities.**
-- **Each test owns its data**: cleared before each test, seeded with fixed timestamps; end to end on its own database
-  and ports, through the real API, with unique names.
-- **Integration tests run on the production engine.**
-- **UI tests query by role and accessible name.**
-- **`test` runs the fast tier only**; run the slower tier that covers a change before merging it.
 
 ## Vitest
 

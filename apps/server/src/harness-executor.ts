@@ -2,10 +2,11 @@ import { TaskState } from '@a2a-js/sdk';
 import { TaskNotCancelableError } from '@a2a-js/sdk/errors';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
-import type { AgentDefinition } from './agent-definition.ts';
 import type { Harness, Session, TurnEndedEvent } from '@a2a-agent-example/harness-core';
+import type { AgentDefinition } from './agent-definition.ts';
 import { messageText, resultArtifact, statusUpdate, submittedTask } from './a2a-events.ts';
 import type { TaskIds } from './a2a-events.ts';
+import { logger } from './logger.ts';
 
 /** Where the executor keeps the harness session id of each A2A context. A `Map` is the in-memory one. */
 export type SessionIdStore = Pick<Map<string, string>, 'get' | 'set'>;
@@ -45,6 +46,7 @@ export class HarnessExecutor implements AgentExecutor {
       session = this.#sessionFor(ids.contextId);
       this.#publishResult(ids, await this.#runTurn(session, messageText(context.userMessage), ids, eventBus), eventBus);
     } catch (error) {
+      logger.error({ err: error, agent: this.#agent.id, ...ids }, 'the harness turn threw');
       this.#publishResult(ids, failed(error instanceof Error ? error.message : String(error)), eventBus);
     } finally {
       if (session?.id !== undefined) {
@@ -81,6 +83,12 @@ export class HarnessExecutor implements AgentExecutor {
   }
 
   #publishResult(ids: TaskIds, result: TurnResult, eventBus: ExecutionEventBus): void {
+    const fields = { agent: this.#agent.id, ...ids, state: TaskState[result.state] };
+    if (result.state === TaskState.TASK_STATE_FAILED) {
+      logger.warn({ ...fields, error: result.text }, 'turn failed');
+    } else {
+      logger.info(fields, 'turn ended');
+    }
     eventBus.publish(AgentEvent.artifactUpdate(resultArtifact(ids, result.text)));
     eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, result.state)));
   }

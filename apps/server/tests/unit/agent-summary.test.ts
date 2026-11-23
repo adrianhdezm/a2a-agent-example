@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeAgent } from '../src/agent-summary.ts';
-import { agentDefinition } from './utils/agent-definition-seed.ts';
+import { summarizeAgent } from '../../src/agent-summary.ts';
+import { agentDefinition } from '../utils/agent-definition-seed.ts';
 
 describe('summarizeAgent', () => {
   it('summarizes an agent with the URL of its card', () => {

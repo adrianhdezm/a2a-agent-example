@@ -1,8 +1,8 @@
 import { HarnessRegistry } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
-import { AgentRegistry } from '../src/agent-registry.ts';
-import { registerStarterAgents } from '../src/starter-agents.ts';
+import { AgentRegistry } from '../../src/agent-registry.ts';
+import { registerStarterAgents } from '../../src/starter-agents.ts';
 
 describe('registerStarterAgents', () => {
   it('registers claude-coder on claude and codex-coder on codex, each in its own workspace', () => {
