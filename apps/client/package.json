@@ -1,0 +1,28 @@
+{
+  "name": "@a2a-agent-example/client",
+  "version": "0.0.0",
+  "description": "Smoke-test A2A client: sends one prompt to a registered agent and prints the task result.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=../../.env src/main.ts",
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-agent-example/agent-registry": "workspace:*",
+    "@a2a-js/sdk": "catalog:"
+  }
+}
