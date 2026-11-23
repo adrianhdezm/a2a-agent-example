@@ -2,9 +2,6 @@ import { HarnessRegistry, UnknownHarnessError } from '@a2a-agent-example/harness
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
 import { AgentRegistry } from '../../src/agent-registry.ts';
-import { DuplicateAgentError } from '../../src/errors/duplicate-agent-error.ts';
-import { InvalidAgentIdError } from '../../src/errors/invalid-agent-id-error.ts';
-import { UnknownAgentError } from '../../src/errors/unknown-agent-error.ts';
 import { agentDefinition } from '../utils/agent-definition-seed.ts';
 
 function registryWithFakeHarness(): AgentRegistry {
@@ -32,7 +29,7 @@ describe('AgentRegistry', () => {
 
     expect(() => {
       registry.register(agentDefinition());
-    }).toThrow(DuplicateAgentError);
+    }).toThrow(expect.objectContaining({ name: 'AgentRegistryError', reason: 'duplicate-id', agentId: 'claude-coder' }));
   });
 
   it('rejects an agent whose harness is not registered', () => {
@@ -49,10 +46,12 @@ describe('AgentRegistry', () => {
 
     expect(() => {
       registry.register(agentDefinition({ id }));
-    }).toThrow(InvalidAgentIdError);
+    }).toThrow(expect.objectContaining({ name: 'AgentRegistryError', reason: 'invalid-id', agentId: id }));
   });
 
-  it('throws an UnknownAgentError for an id that is not registered', () => {
-    expect(() => registryWithFakeHarness().get('missing')).toThrow(UnknownAgentError);
+  it('throws an unknown-id error for an id that is not registered', () => {
+    expect(() => registryWithFakeHarness().get('missing')).toThrow(
+      expect.objectContaining({ name: 'AgentRegistryError', reason: 'unknown-id', message: 'No agent is registered as "missing"' })
+    );
   });
 });

@@ -1,5 +1,4 @@
-import { InvalidEnvironmentVariableError } from './errors/invalid-environment-variable-error.ts';
-import { MissingEnvironmentVariableError } from './errors/missing-environment-variable-error.ts';
+import { ConfigError } from './errors/config-error.ts';
 
 /** What the server needs from its environment. */
 export interface ServerConfig {
@@ -22,7 +21,7 @@ export function readConfig(env: Environment): ServerConfig {
 function required(env: Environment, variable: string): string {
   const value = env[variable];
   if (value === undefined || value === '') {
-    throw new MissingEnvironmentVariableError(variable);
+    throw new ConfigError({ reason: 'missing', variable });
   }
   return value;
 }
@@ -30,7 +29,7 @@ function required(env: Environment, variable: string): string {
 function readPort(env: Environment): number {
   const port = Number(required(env, 'PORT'));
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new InvalidEnvironmentVariableError('PORT', 'an integer from 1 to 65535');
+    throw new ConfigError({ reason: 'invalid', variable: 'PORT', expected: 'an integer from 1 to 65535' });
   }
   return port;
 }
