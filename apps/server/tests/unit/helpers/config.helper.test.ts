@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readConfig } from '../../src/config.ts';
+import { readConfig } from '../../../src/helpers/config.helper.ts';
 
 const env = { PORT: '4000', ANTHROPIC_API_KEY: 'sk-ant-test', CODEX_API_KEY: 'sk-codex-test' };
 

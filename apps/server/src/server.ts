@@ -3,33 +3,36 @@ import { resolve } from 'node:path';
 import { ClaudeHarness } from '@a2a-agent-example/harness-claude';
 import { CodexHarness } from '@a2a-agent-example/harness-codex';
 import { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import { AgentRegistry } from './agent-registry.ts';
-import { summarizeAgent } from './agent-summary.ts';
+import { claudeCoderAgent } from './agents/claude-coder.agent.ts';
+import { codexCoderAgent } from './agents/codex-coder.agent.ts';
 import { createApp } from './app.ts';
-import { readConfig } from './config.ts';
+import { summarizeAgent } from './helpers/agent-url.helper.ts';
+import { readConfig } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
-import { registerStarterAgents } from './starter-agents.ts';
+import { AgentRegistry } from './registries/agent.registry.ts';
 
 // A generous bound on model round trips per harness turn, so a confused agent stops instead of looping.
 const claudeMaxTurns = 30;
 
 const config = readConfig(process.env);
 
-const harnesses = new HarnessRegistry();
-harnesses.register(new ClaudeHarness({ apiKey: config.anthropicApiKey, maxTurns: claudeMaxTurns }));
-harnesses.register(new CodexHarness({ apiKey: config.codexApiKey }));
+const harnessRegistry = new HarnessRegistry();
+harnessRegistry.register(new ClaudeHarness({ apiKey: config.anthropicApiKey, maxTurns: claudeMaxTurns }));
+harnessRegistry.register(new CodexHarness({ apiKey: config.codexApiKey }));
 
-const agents = new AgentRegistry(harnesses);
-registerStarterAgents(agents, resolve(import.meta.dirname, '../workspaces'));
-await Promise.all(agents.list().map((agent) => mkdir(agent.workspace, { recursive: true })));
+const workspacesDir = resolve(import.meta.dirname, '../workspaces');
+const agentRegistry = new AgentRegistry(harnessRegistry);
+agentRegistry.register(claudeCoderAgent(workspacesDir));
+agentRegistry.register(codexCoderAgent(workspacesDir));
+await Promise.all(agentRegistry.list().map((agent) => mkdir(agent.workspace, { recursive: true })));
 
 const baseUrl = `http://localhost:${String(config.port)}`;
-const server = createApp({ agents, harnesses, baseUrl }).listen(config.port, (error) => {
+const server = createApp({ agentRegistry, harnessRegistry, baseUrl }).listen(config.port, (error) => {
   if (error) {
     throw error;
   }
   logger.info({ baseUrl }, 'A2A agent server listening');
-  for (const agent of agents.list()) {
+  for (const agent of agentRegistry.list()) {
     logger.info({ agent: agent.id, harness: agent.harness, cardUrl: summarizeAgent(agent, baseUrl).cardUrl }, 'agent mounted');
   }
 });

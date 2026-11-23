@@ -1,4 +1,4 @@
-import type { AgentDefinition } from '../../src/agent-definition.ts';
+import type { AgentDefinition } from '../../src/models/agent.model.ts';
 
 /** A valid agent definition on the `fake` harness, with `overrides` applied. */
 export function agentDefinition(overrides: Partial<AgentDefinition> = {}): AgentDefinition {

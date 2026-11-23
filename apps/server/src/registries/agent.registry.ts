@@ -1,7 +1,7 @@
 import { UnknownHarnessError } from '@a2a-agent-example/harness-core';
 import type { HarnessRegistry } from '@a2a-agent-example/harness-core';
-import type { AgentDefinition } from './agent-definition.ts';
-import { AgentRegistryError } from './errors/agent-registry-error.ts';
+import { AgentRegistryError } from '../models/agent.model.ts';
+import type { AgentDefinition } from '../models/agent.model.ts';
 
 const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

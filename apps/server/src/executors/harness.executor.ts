@@ -3,10 +3,10 @@ import { TaskNotCancelableError } from '@a2a-js/sdk/errors';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import type { Harness, Session, TurnEndedEvent } from '@a2a-agent-example/harness-core';
-import type { AgentDefinition } from './agent-definition.ts';
-import { messageText, resultArtifact, statusUpdate, submittedTask } from './a2a-events.ts';
-import type { TaskIds } from './a2a-events.ts';
-import { logger } from './logger.ts';
+import { messageText, resultArtifact, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
+import type { TaskIds } from '../helpers/a2a-message.helper.ts';
+import { logger } from '../logger.ts';
+import type { AgentDefinition } from '../models/agent.model.ts';
 
 /** Where the executor keeps the harness session id of each A2A context. A `Map` is the in-memory one. */
 export type SessionIdStore = Pick<Map<string, string>, 'get' | 'set'>;

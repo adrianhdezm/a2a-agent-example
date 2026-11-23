@@ -1,3 +1,10 @@
+/** What the server needs from its environment. */
+export interface ServerConfig {
+  port: number;
+  anthropicApiKey: string;
+  codexApiKey: string;
+}
+
 /** Why an environment variable cannot be used: it is unset or empty, or its value is not one the server accepts. */
 export type ConfigErrorDetails = { reason: 'missing'; variable: string } | { reason: 'invalid'; variable: string; expected: string };
 

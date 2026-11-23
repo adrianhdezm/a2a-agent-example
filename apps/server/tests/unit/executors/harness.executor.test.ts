@@ -4,10 +4,10 @@ import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import type { HarnessEvent } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
-import { HarnessExecutor } from '../../src/harness-executor.ts';
-import { agentDefinition } from '../utils/agent-definition-seed.ts';
-import { fakeEventBus } from '../utils/fake-event-bus.ts';
-import { requestContext } from '../utils/request-context-seed.ts';
+import { HarnessExecutor } from '../../../src/executors/harness.executor.ts';
+import { agentDefinition } from '../../utils/agent-definition-seed.ts';
+import { fakeEventBus } from '../../utils/fake-event-bus.ts';
+import { requestContext } from '../../utils/request-context-seed.ts';
 
 const completedTurn: HarnessEvent[] = [
   { type: 'agent.message', text: 'Writing hello.py' },

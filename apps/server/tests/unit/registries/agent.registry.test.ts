@@ -1,8 +1,8 @@
 import { HarnessRegistry, UnknownHarnessError } from '@a2a-agent-example/harness-core';
 import { FakeHarness } from '@a2a-agent-example/harness-core/testing';
 import { describe, expect, it } from 'vitest';
-import { AgentRegistry } from '../../src/agent-registry.ts';
-import { agentDefinition } from '../utils/agent-definition-seed.ts';
+import { AgentRegistry } from '../../../src/registries/agent.registry.ts';
+import { agentDefinition } from '../../utils/agent-definition-seed.ts';
 
 function registryWithFakeHarness(): AgentRegistry {
   const harnesses = new HarnessRegistry();

@@ -37,6 +37,22 @@ What the docs below do not say about this workspace, and every place it departs 
 | `apps/client`                               | the smoke-test CLI; entry point `src/main.ts`              | Node package                                                                     |
 | `apps/server`                               | the A2A server; entry point `src/server.ts`                | Node package, plus Express, Pino, Express + Pino and REST API for its own routes |
 
+### Server layout
+
+`apps/server/src/` keeps at its root only what the Express doc puts there: `server.ts`, `app.ts`, `logger.ts` and `express.d.ts`. Everything else is one of these blocks, its file named with the block's singular suffix:
+
+| Block      | Lives in                               | Is                                                                                                           | Must not                                                   |
+| ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| model      | `models/<name>.model.ts`               | types and error classes: `agent`, `config`, `app-context`                                                    | contain logic beyond an error's message                    |
+| registry   | `registries/<name>.registry.ts`        | the agents' data layer, in memory, reached through `AppContext`; throws domain errors (`AgentRegistryError`) | know about HTTP or A2A                                     |
+| helper     | `helpers/<name>.helper.ts`             | functions with no Express in them: config, URLs and summaries, cards, A2A messages                           | take an Express `Request`                                  |
+| executor   | `executors/<name>.executor.ts`         | an A2A SDK `AgentExecutor`: the bridge from an A2A task to a harness turn                                    | reach the registry; it is handed its agent                 |
+| controller | `controllers/<resource>.controller.ts` | one `async (req, res, next)` per route; maps domain errors to statuses (`unknown-id` → 404)                  | reach a dependency except through `req.app.locals.context` |
+| middleware | `middlewares/<name>.middleware.ts`     | `notFoundHandler` and `errorHandler`                                                                         | call the registry                                          |
+| agent      | `agents/<id>.agent.ts`                 | one agent definition, built with `codingAgent` from `agents/coding-agent.ts`; `server.ts` registers it       | hold behaviour                                             |
+
+A registry is not a DAO: the Data access concept's DAOs are tables in a real database. When agents come from a store, `daos/agent.dao.ts` takes the registry's place behind the same `register`, `get` and `list`.
+
 ### Commands
 
 From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check` are the required checks; `pnpm test:integration` runs the server's API tests; `pnpm dev:server`, `pnpm start:server` and `pnpm ask <agent-id> "<prompt>"` run the server and the client.
@@ -45,11 +61,10 @@ From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check
 
 - **The server's entry point is `src/server.ts`**, the Express doc's composition root; the Node package Layout's `src/main.ts` is the client's. Either way it is the one file with side effects.
 - **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.
-- **The A2A endpoints are the SDK's routers**, mounted with `app.use` at `/agents/<id>/.well-known/agent-card.json` and `/agents/<id>/a2a/jsonrpc`. Their requests, answers and errors follow the A2A 1.0 spec (JSON-RPC errors), not the REST API rules, which govern the server's own routes (`GET /agents`, `GET /health`) and the not-found answer.
+- **The A2A endpoints are the SDK's routers**, mounted with `app.use` at `/agents/<id>/.well-known/agent-card.json` and `/agents/<id>/a2a/jsonrpc`. Their requests, answers and errors follow the A2A 1.0 spec (JSON-RPC errors), not the REST API rules, which govern the server's own routes (`GET /agents`, `GET /agents/:id`, `GET /health`) and the not-found answer.
 - **No app-wide `express.json()`**: the JSON-RPC router parses its own body and must answer malformed JSON as a JSON-RPC parse error; the server's own routes take no body.
 - **`GET /agents` answers a plain array**, not the REST API list envelope: the agents come from configuration and are few. It moves to the list format when they come from a store.
 - **`GET /health` probes nothing yet**: the server has no dependency; a persistent store adds its key.
-- **Error classes live in `src/errors/`** (Node package), not under `models/` (Express).
 - **Server tests are split by tier**: `tests/unit/` mirrors `src/` and runs in `pnpm test`; `tests/api/` drives the endpoints over HTTP on an ephemeral port and runs in `pnpm test:integration`. It needs no database, keys or network. The other packages keep `tests/<module>.test.ts`.
 - **The shared harness fake is a subpath export**, `@a2a-agent-example/harness-core/testing`, since fakes used by several packages cannot live in one package's test utilities.
 

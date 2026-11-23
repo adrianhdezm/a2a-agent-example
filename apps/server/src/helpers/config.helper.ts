@@ -1,15 +1,9 @@
-import { ConfigError } from './errors/config-error.ts';
-
-/** What the server needs from its environment. */
-export interface ServerConfig {
-  port: number;
-  anthropicApiKey: string;
-  codexApiKey: string;
-}
+import { ConfigError } from '../models/config.model.ts';
+import type { ServerConfig } from '../models/config.model.ts';
 
 type Environment = Record<string, string | undefined>;
 
-/** Reads the configuration once, throwing for any variable that is missing or unusable: there are no fallbacks. */
+/** Reads the configuration once, throwing a `ConfigError` for any variable that is missing or unusable: no fallbacks. */
 export function readConfig(env: Environment): ServerConfig {
   return {
     port: readPort(env),

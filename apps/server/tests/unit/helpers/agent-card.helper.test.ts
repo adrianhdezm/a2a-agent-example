@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildAgentCard } from '../../src/agent-card.ts';
-import { agentDefinition } from '../utils/agent-definition-seed.ts';
+import { buildAgentCard } from '../../../src/helpers/agent-card.helper.ts';
+import { agentDefinition } from '../../utils/agent-definition-seed.ts';
 
 describe('buildAgentCard', () => {
   it('describes the agent with one JSON-RPC interface on protocol 1.0 at its own endpoint', () => {

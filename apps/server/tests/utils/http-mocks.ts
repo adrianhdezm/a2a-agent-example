@@ -14,15 +14,23 @@ export function mockLog(): MockLog {
 
 interface MockRequestOptions {
   context?: AppContext;
+  params?: Record<string, string>;
   query?: Record<string, unknown>;
   log?: MockLog;
   method?: string;
   path?: string;
 }
 
-/** A request as a handler sees it: the context on `req.app.locals`, the query, the request's logger. */
-export function mockRequest({ context, query = {}, log = mockLog(), method = 'GET', path = '/' }: MockRequestOptions = {}): Request {
-  return { app: { locals: { context } }, query, log, method, path } as unknown as Request;
+/** A request as a handler sees it: the context on `req.app.locals`, the params and query, the request's logger. */
+export function mockRequest<P = Record<string, string>>({
+  context,
+  params = {},
+  query = {},
+  log = mockLog(),
+  method = 'GET',
+  path = '/'
+}: MockRequestOptions = {}): Request<P> {
+  return { app: { locals: { context } }, params, query, log, method, path } as unknown as Request<P>;
 }
 
 export interface MockResponse {

@@ -1,7 +1,7 @@
 import { A2A_PROTOCOL_VERSION } from '@a2a-js/sdk';
 import type { AgentCard } from '@a2a-js/sdk';
-import type { AgentDefinition } from './agent-definition.ts';
-import { agentPaths, joinUrl } from './agent-paths.ts';
+import type { AgentDefinition } from '../models/agent.model.ts';
+import { agentPaths, joinUrl } from './agent-url.helper.ts';
 
 const textModes = ['text/plain'];
 
