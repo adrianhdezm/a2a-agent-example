@@ -1,0 +1,29 @@
+{
+  "name": "@a2a-agent-example/shared",
+  "version": "0.0.0",
+  "description": "What the agent and its client both use: required environment variables and A2A text parts.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@a2a-agent-example/eslint-config": "workspace:*",
+    "@a2a-agent-example/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "catalog:"
+  }
+}
