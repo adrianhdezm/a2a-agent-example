@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readPort, requireVariable } from '../src/config.ts';
-import { ConfigError } from '../src/errors/config-error.ts';
+import { readPort, requireVariable } from '../../src/shared/config.ts';
+import { ConfigError } from '../../src/shared/errors/config-error.ts';
 
 describe('config', () => {
   it('reads a variable that is set', () => {

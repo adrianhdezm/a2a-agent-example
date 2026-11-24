@@ -1,20 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Role, TaskState } from '@a2a-js/sdk';
-import type { Message, Part, Task, TaskArtifactUpdateEvent, TaskStatusUpdateEvent } from '@a2a-js/sdk';
+import type { Message, Task, TaskArtifactUpdateEvent, TaskStatusUpdateEvent } from '@a2a-js/sdk';
+import { textPart } from '../shared/a2a-text.ts';
 
 /** The task and context every event of one execution belongs to. */
 export interface TaskIds {
   taskId: string;
   contextId: string;
-}
-
-export function textPart(text: string): Part {
-  return { content: { $case: 'text', value: text }, metadata: undefined, filename: '', mediaType: 'text/plain' };
-}
-
-/** The text of a message: its text parts, in order, separated by blank lines; other parts are left out. */
-export function messageText(message: Message): string {
-  return message.parts.flatMap((part) => (part.content?.$case === 'text' ? [part.content.value] : [])).join('\n\n');
 }
 
 export function agentMessage(ids: TaskIds, text: string): Message {

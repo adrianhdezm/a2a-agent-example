@@ -1,7 +1,8 @@
 import { TaskState } from '@a2a-js/sdk';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
-import { forecastArtifact, messageText, statusUpdate, submittedTask } from './a2a-messages.ts';
+import { partsText } from '../shared/a2a-text.ts';
+import { forecastArtifact, statusUpdate, submittedTask } from './a2a-messages.ts';
 import type { TaskIds } from './a2a-messages.ts';
 import type { TurnEvent, TurnRequest } from './claude-turn.ts';
 import { readTurnEnd } from './weather-prompt.ts';
@@ -36,7 +37,7 @@ export class WeatherAgentExecutor implements AgentExecutor {
     const abortController = new AbortController();
     this.#running.set(ids.taskId, abortController);
     try {
-      this.#publishEnd(ids, await this.#runOneTurn(ids, messageText(context.userMessage), abortController, eventBus), eventBus);
+      this.#publishEnd(ids, await this.#runOneTurn(ids, partsText(context.userMessage.parts), abortController, eventBus), eventBus);
     } catch (error) {
       const end = abortController.signal.aborted
         ? { state: TaskState.TASK_STATE_CANCELED, text: 'Cancelled.' }

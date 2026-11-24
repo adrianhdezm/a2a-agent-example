@@ -53,6 +53,35 @@ export default defineConfig(
     }
   },
   {
+    // The agent and its client meet only over A2A: neither imports the other, and both may import shared/.
+    files: ['src/server/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/client/**'], message: 'The server never imports the client; move what both need to src/shared/.' }] }
+      ]
+    }
+  },
+  {
+    files: ['src/client/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/server/**'], message: 'The client never imports the server; move what both need to src/shared/.' }] }
+      ]
+    }
+  },
+  {
+    // shared/ is what the server and the client both use, so it depends on neither.
+    files: ['src/shared/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/server/**', '**/client/**'], message: 'shared/ depends on neither the server nor the client.' }] }
+      ]
+    }
+  },
+  {
     // A describe holds every case for one module, so the size guardrails do not apply, and tests may assert.
     files: ['tests/**/*.ts'],
     rules: {

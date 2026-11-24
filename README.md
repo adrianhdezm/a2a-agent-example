@@ -69,16 +69,20 @@ Wear a warm coat, gloves and waterproof boots.
 3. Claude calls `find_city` and `get_forecast`, two in-process MCP tools backed by Open-Meteo. It has no other tools, built-in ones included, and loads none of the machine's Claude settings. Each tool call is streamed as a `WORKING` update.
 4. As in the movie-agent sample, the answer's last line says how the turn ended. `COMPLETED` publishes the answer as a `forecast` artifact and ends the task. `AWAITING_USER_INPUT` ends it `INPUT_REQUIRED`, with the agent's question on the status.
 
+The code is in three folders: the agent in `src/server/`, the command line in `src/client/`, and what both use in `src/shared/`. The two apps meet only over A2A, and lint rejects an import from one into the other.
+
 | File                                                 | Does                                                                                            |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/server.ts`                                      | Starts the agent: configuration, tools, executor, card, Express                                 |
-| `src/weather-agent-executor.ts`                      | The A2A `AgentExecutor`: one Claude turn per message, streaming, `input-required`, cancellation |
-| `src/claude-turn.ts`                                 | One Claude Agent SDK `query()` and its messages as turn events                                  |
-| `src/weather-tools.ts`                               | The `find_city` and `get_forecast` tools                                                        |
-| `src/open-meteo.ts`                                  | The Open-Meteo geocoding and forecast client, its answers validated with zod                    |
-| `src/weather-prompt.ts`                              | The system prompt and the end-of-turn marker                                                    |
-| `src/agent-card.ts`, `src/app.ts`                    | The Agent Card and the Express app around the SDK's handlers                                    |
-| `src/cli.ts`, `src/conversation.ts`, `src/render.ts` | The command line, its conversation state and how it prints events                               |
+| `src/server/main.ts`                                 | Starts the agent: configuration, tools, executor, card, Express                                 |
+| `src/server/weather-agent-executor.ts`               | The A2A `AgentExecutor`: one Claude turn per message, streaming, `input-required`, cancellation |
+| `src/server/claude-turn.ts`                          | One Claude Agent SDK `query()` and its messages as turn events                                  |
+| `src/server/weather-tools.ts`                        | The `find_city` and `get_forecast` tools                                                        |
+| `src/server/open-meteo.ts`                           | The Open-Meteo geocoding and forecast client, its answers validated with zod                    |
+| `src/server/weather-prompt.ts`                       | The system prompt and the end-of-turn marker                                                    |
+| `src/server/agent-card.ts`, `src/server/app.ts`      | The Agent Card and the Express app around the SDK's handlers                                    |
+| `src/client/main.ts`                                 | The command line: reads the card, sends each line, prints the events                            |
+| `src/client/conversation.ts`, `src/client/render.ts` | The conversation's ids between messages, and how events are printed                             |
+| `src/shared/config.ts`, `src/shared/a2a-text.ts`     | Required environment variables, and A2A text parts                                              |
 
 ## Checks
 

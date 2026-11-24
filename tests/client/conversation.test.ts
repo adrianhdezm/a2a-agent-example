@@ -1,7 +1,7 @@
 import { TaskState } from '@a2a-js/sdk';
 import type { StreamResponse } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
-import { Conversation } from '../src/conversation.ts';
+import { Conversation } from '../../src/client/conversation.ts';
 
 function task(id: string, contextId: string): StreamResponse {
   return {

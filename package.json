@@ -8,9 +8,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node --env-file=.env src/server.ts",
-    "dev": "node --import=tsx --watch --env-file=.env src/server.ts",
-    "cli": "node --env-file=.env src/cli.ts",
+    "start": "node --env-file=.env src/server/main.ts",
+    "dev": "node --import=tsx --watch --env-file=.env src/server/main.ts",
+    "cli": "node --env-file=.env src/client/main.ts",
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

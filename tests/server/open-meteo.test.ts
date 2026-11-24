@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OpenMeteoError } from '../src/errors/open-meteo-error.ts';
-import { openMeteo } from '../src/open-meteo.ts';
-import { lisbonForecast, lisbonSearch, rateLimited } from './fixtures/open-meteo.ts';
+import { OpenMeteoError } from '../../src/server/errors/open-meteo-error.ts';
+import { openMeteo } from '../../src/server/open-meteo.ts';
+import { lisbonForecast, lisbonSearch, rateLimited } from '../fixtures/open-meteo.ts';
 
 function answering(body: unknown, status = 200) {
   const requested: URL[] = [];

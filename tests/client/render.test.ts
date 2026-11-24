@@ -1,7 +1,7 @@
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { StreamResponse } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
-import { renderEvent } from '../src/render.ts';
+import { renderEvent } from '../../src/client/render.ts';
 
 // Tags each styled span with its style, so a test can see which style a line uses without terminal codes.
 const style = (format: string, text: string) => `<${format}>${text}`;

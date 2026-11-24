@@ -1,10 +1,10 @@
 import { TaskState } from '@a2a-js/sdk';
 import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import { describe, expect, it } from 'vitest';
-import type { TurnEvent, TurnRequest } from '../src/claude-turn.ts';
-import { WeatherAgentExecutor } from '../src/weather-agent-executor.ts';
-import { fakeEventBus } from './utils/fake-event-bus.ts';
-import { requestContext } from './utils/request-context-seed.ts';
+import type { TurnEvent, TurnRequest } from '../../src/server/claude-turn.ts';
+import { WeatherAgentExecutor } from '../../src/server/weather-agent-executor.ts';
+import { fakeEventBus } from '../utils/fake-event-bus.ts';
+import { requestContext } from '../utils/request-context-seed.ts';
 
 const ids = { taskId: 'task-1', contextId: 'context-1' };
 

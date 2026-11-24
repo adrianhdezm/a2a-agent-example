@@ -1,7 +1,7 @@
 import { createInterface } from 'node:readline/promises';
 import { styleText } from 'node:util';
 import { ClientFactory } from '@a2a-js/sdk/client';
-import { requireVariable } from './config.ts';
+import { requireVariable } from '../shared/config.ts';
 import { Conversation } from './conversation.ts';
 import { renderEvent } from './render.ts';
 import type { Style } from './render.ts';

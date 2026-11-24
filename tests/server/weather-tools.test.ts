@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OpenMeteoError } from '../src/errors/open-meteo-error.ts';
-import type { Forecast, OpenMeteo, Place } from '../src/open-meteo.ts';
-import { findCityTool, formatForecast, formatPlaces, getForecastTool, weatherToolNames } from '../src/weather-tools.ts';
+import { OpenMeteoError } from '../../src/server/errors/open-meteo-error.ts';
+import type { Forecast, OpenMeteo, Place } from '../../src/server/open-meteo.ts';
+import { findCityTool, formatForecast, formatPlaces, getForecastTool, weatherToolNames } from '../../src/server/weather-tools.ts';
 
 const lisbon: Place = {
   name: 'Lisbon',

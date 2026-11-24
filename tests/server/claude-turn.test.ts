@@ -1,8 +1,8 @@
 import type { McpServerConfig, Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
-import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../src/claude-turn.ts';
-import type { ClaudeTurnSettings, TurnEvent } from '../src/claude-turn.ts';
-import { answer, init, maxTurns, sessionId, success, toolCall } from './fixtures/claude-messages.ts';
+import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../../src/server/claude-turn.ts';
+import type { ClaudeTurnSettings, TurnEvent } from '../../src/server/claude-turn.ts';
+import { answer, init, maxTurns, sessionId, success, toolCall } from '../fixtures/claude-messages.ts';
 
 function settings(messages: SDKMessage[] = []) {
   const calls: { prompt: string; options: Options }[] = [];

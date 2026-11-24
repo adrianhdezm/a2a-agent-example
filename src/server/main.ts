@@ -2,7 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { agentPaths, weatherAgentCard } from './agent-card.ts';
 import { createApp } from './app.ts';
 import { runClaudeTurn } from './claude-turn.ts';
-import { readPort, requireVariable } from './config.ts';
+import { readPort, requireVariable } from '../shared/config.ts';
 import { openMeteo } from './open-meteo.ts';
 import { WeatherAgentExecutor } from './weather-agent-executor.ts';
 import { weatherInstructions } from './weather-prompt.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readTurnEnd, weatherInstructions } from '../src/weather-prompt.ts';
+import { readTurnEnd, weatherInstructions } from '../../src/server/weather-prompt.ts';
 
 describe('weather-prompt', () => {
   describe('weatherInstructions', () => {
