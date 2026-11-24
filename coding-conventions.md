@@ -1,7 +1,7 @@
 # Coding Conventions
 
-How this project is built and how to change it: a Node package project, following the
-`consult-stack-knowledge` skill's blueprint for that stack. It is the working guide for everyone who changes the code, people and agents
+How this project is built and how to change it: an A2A weather agent workspace project, following the
+`consult-stack-knowledge` docs it was built from. It is the working guide for everyone who changes the code, people and agents
 alike. The code follows every rule here; a change that breaks one changes this file in the same commit.
 
 ## Contents
@@ -11,37 +11,78 @@ alike. The code follows every rule here; a change that breaks one changes this f
 - [Code style](#code-style)
 - [pnpm](#pnpm)
 - [TypeScript](#typescript)
+- [REST API](#rest-api)
+- [Data access](#data-access)
+- [Testing](#testing)
 - [Node](#node)
 - [Node + TypeScript](#node--typescript)
+- [Express](#express)
+- [Pino](#pino)
+- [Express + Pino](#express--pino)
 - [ESLint](#eslint)
 - [TypeScript + ESLint](#typescript--eslint)
 - [Prettier](#prettier)
 - [ESLint + Prettier](#eslint--prettier)
-- [Testing](#testing)
 - [Vitest](#vitest)
 
 ## This project
 
-A weather agent on the Claude Agent SDK, served over A2A 1.0, and an interactive A2A client, in one Node package. What the docs below do not say about it, and every place it departs from them, with the reason.
+A weather agent on the Claude Agent SDK, served over A2A 1.0, and an interactive A2A command line, in a pnpm workspace. What the docs below do not say about it, and every place it departs from them, with the reason.
 
-### Layout
+### Workspace
 
-Three folders under `src/`, each laid out as the Node package blueprint lays out `src/`: the two apps each have their own `main.ts`, and `shared/` only exports. Tests mirror them under `tests/server/`, `tests/client/` and `tests/shared/`; `tests/fixtures/` and `tests/utils/` hold the samples and fakes.
+| Path                                        | Is                                                                                                                                            | Follows                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `tooling/tsconfig`, `tooling/eslint-config` | the shared compiler options and ESLint rules                                                                                                  | Node package, Growing into a workspace                                                                        |
+| `packages/shared`                           | what both apps use: `requireVariable` and `readPort` for configuration, `textPart` and `partsText` for A2A text parts; exports `src/index.ts` | Node package                                                                                                  |
+| `apps/server`                               | the agent; entry point `src/server.ts`                                                                                                        | Node package, plus Express, Pino, Express + Pino, REST API and Data access, through the building blocks below |
+| `apps/client`                               | the command line; entry point `src/main.ts`, with `conversation.ts` (the ids between messages) and `render.ts` (events as lines)              | Node package                                                                                                  |
 
-| Folder        | Holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | May import  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| `src/server/` | the agent. `main.ts` reads `PORT` and `ANTHROPIC_API_KEY` and wires everything; `app.ts` and `agent-card.ts` serve the SDK's card and JSON-RPC handlers; `weather-agent-executor.ts` runs one Claude turn per message in the Claude session of its `contextId`; `claude-turn.ts` is one Claude Agent SDK `query()`; `weather-tools.ts`, `open-meteo.ts` and `weather-codes.ts` are the tools and the Open-Meteo client; `weather-prompt.ts` the system prompt and the end-of-turn marker; `a2a-messages.ts` builds A2A tasks, status updates and the `forecast` artifact | `shared/`   |
-| `src/client/` | the command line. `main.ts` reads the agent's card, then sends one streamed A2A message per line typed; `conversation.ts` keeps the `contextId` and `taskId` between messages; `render.ts` prints the events                                                                                                                                                                                                                                                                                                                                                             | `shared/`   |
-| `src/shared/` | what both use: `config.ts` reads required environment variables, `a2a-text.ts` makes and reads A2A text parts                                                                                                                                                                                                                                                                                                                                                                                                                                                            | neither app |
+The apps never import each other: they meet only over A2A. What both need goes to `packages/shared`, which imports neither.
 
-The boundary is a lint error, not a habit: `no-restricted-imports` in `eslint.config.js` rejects an import from the other app, or from either app in `shared/`.
+### Server building blocks
+
+`apps/server/src/` holds four files at its root, as the Express doc places them: `server.ts` (the composition root), `app.ts` (the pure `createApp(context)` factory), `logger.ts` (the one Pino logger) and `express.d.ts` (`AppContext` on `Express.Locals`). Everything else is in a block. The first five are the Express doc's; the rest are this project's, for what an agent server has that a REST API does not.
+
+| Block      | Lives in                                       | Is                                                                                                                                                                                                     | Must not                                                                 |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| controller | `controllers/<resource>.controller.ts`         | one `async (req, res, next)` per route of the server's own: `getHealth`                                                                                                                                | reach a dependency except through `req.app.locals.context`               |
+| middleware | `middlewares/<name>.middleware.ts`             | `notFoundHandler` and `errorHandler`, which apply to every request                                                                                                                                     | answer a route of their own                                              |
+| context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext`: the A2A request handler the app mounts                                                                                                                                                   | —                                                                        |
+| model      | `models/<name>.model.ts`                       | types and error classes: `weather` (places, forecasts, `WeatherService`, `OpenMeteoError`), `turn` (turn events, `RunTurn`), `app-context`                                                             | contain logic beyond an error's message                                  |
+| helper     | `helpers/<name>.helper.ts`                     | transport-free functions: the Agent Card, A2A message builders, weather codes and formatting                                                                                                           | take an Express `Request`                                                |
+| client     | `clients/<service>.client.ts`                  | one outbound integration each, reached with what it needs handed in: `open-meteo` (validates every answer with zod, throws `OpenMeteoError`), `claude` (one Claude Agent SDK `query()` as turn events) | know about A2A or Express                                                |
+| tool       | `tools/<name>.tool.ts`                         | the Claude tools and the in-process MCP server that offers them: `weather` (`find_city`, `get_forecast`)                                                                                               | call an API except through a client                                      |
+| prompt     | `prompts/<name>.prompt.ts`                     | a system prompt and the protocol of its answers: `weather` (the instructions, the `COMPLETED` / `AWAITING_USER_INPUT` marker)                                                                          | call a model                                                             |
+| executor   | `executors/<name>.executor.ts`                 | an A2A SDK `AgentExecutor`: `weather-agent`, one Claude turn per message, streamed, with `input-required` and cancellation                                                                             | reach a client except through the `RunTurn` it is handed                 |
+| store      | `stores/<name>.store.ts`                       | state kept in memory, created by the composition root and handed to what uses it: `session` (the Claude session of each A2A context)                                                                   | be reached any other way than through what the composition root hands in |
+
+Tests mirror the blocks: `tests/unit/<block>/<name>.<block>.test.ts` (`pnpm test`), and `tests/api/` for the endpoints over HTTP (`pnpm test:integration`). `tests/fixtures/` holds recorded samples and `tests/utils/` the fakes, the HTTP mocks and the test app.
+
+### Adding a concept
+
+Code that does not fit a block above is a new concept, and the structure grows to hold it rather than bending around it:
+
+1. **Check the table first.** An HTTP route is a controller, a type is a model, a call to another service is a client, a pure function is a helper.
+2. **Give a new concept a block**: a plural folder under `src/` named for it, files named `<name>.<block>.ts` (`notifiers/slack.notifier.ts`), tests in `tests/unit/<block>/`. Never a file at the root of `src/`, which holds the four files above only.
+3. **Add its row to the table above in the same commit**: where it lives, what it is, and what it must not do, which says what it may depend on.
+4. **Reach it the way its neighbours are reached**: what handlers use goes on `AppContext`; what the executor or the tools use is handed in by `server.ts`.
+
+### Commands
+
+From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check` are the required checks; `pnpm test:integration` runs the server's API tests. `pnpm dev` and `pnpm start` run the agent, `pnpm cli` the command line.
 
 ### Exceptions
 
-- **Two apps in one package**, `src/server/main.ts` and `src/client/main.ts`, not one `src/main.ts`: the agent and its client stay in one package while the project is small. `start` and `dev` run the agent, `cli` runs the client. When either grows, its folder becomes its own package, and `shared/` the package both depend on.
-- **It listens on `PORT`** (41241 in `.env.example`, the port of the a2a-js samples), which the Node package blueprint's "nothing listens" does not cover.
-- **No tests for the two `main.ts` files or `server/app.ts`**: the entry points only wire, and `app.ts` only mounts the SDK's handlers. Running the agent and the client end to end covers them.
-- **`pnpm test` never calls Claude or Open-Meteo**: the turn runner, the query, the Open-Meteo client and its `fetch` are all handed in, so tests use recorded samples and fakes.
+- **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.
+- **The A2A endpoints are the SDK's own handlers**, mounted in `app.ts` with `app.use` at `/.well-known/agent-card.json` and `/a2a/jsonrpc`, with no controller in front: the SDK answers them, and their requests, answers and errors follow the A2A 1.0 spec (JSON-RPC errors), not the REST API rules. Those govern the server's own routes (`GET /health`) and the not-found answer.
+- **No `express.json()`**: the server's own routes take no body, and the A2A JSON-RPC handler parses its own, answering malformed JSON as a JSON-RPC parse error.
+- **No DAO yet**: the only state is the `session` store, in memory. When it moves to a database it becomes `daos/session.dao.ts`, following Data access.
+- **`GET /health` probes nothing**: Claude and Open-Meteo are reached per turn, and a failing one fails that turn, not the server.
+- **The client is a command line, not an Express app**, so it keeps the Node package layout (`src/main.ts` and its modules).
+- **The root `format` and `format:check` also cover the root's own files** (`*.json`, `*.md`, `*.yaml`), which `pnpm -r` never reaches.
+- **`pnpm test` and `pnpm test:integration` never call Claude or Open-Meteo**: the turn runner, the query and `fetch` are handed in, so tests use recorded samples and fakes.
+- **No unit tests for `server.ts`, `app.ts` or the client's `main.ts`**: they only wire. The API tests cover what `app.ts` mounts; running the agent and the command line end to end covers the rest.
 
 ## Node package
 
@@ -117,6 +158,52 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 - **No `enum`, `namespace`, parameter properties or `import x = require()`**: use `as const` objects and unions.
 - **Never write a type that mirrors a generated file**: infer it.
 
+## REST API
+
+- **Resources are plural nouns and methods carry the verb**: `GET` list and read, `POST` create (201), `PATCH` partial
+  update, `DELETE` (204, no body).
+- **Every error answers `{ status: 'error', message }`** from one error handler; a client error's message is shown, an
+  unexpected one's hidden and logged.
+- **Every input is validated at the edge against a strict schema**; anything unknown is a 400.
+- **Handlers validate, call the data layer and shape the answer**; a missing resource is a 404.
+- **Every list speaks one format**: `?filter=<json>&sortField=…&sortDirection=ASC|DESC&page=…&pageSize=…` in,
+  `{ items, total, page, pageSize, totalPages }` out.
+- **Dates travel as ISO-8601 strings, ids are UUIDs, absence is `null`.**
+- **A change to the API's types changes its clients' types in the same commit.**
+- **A new route gets a handler test and a case in its resource's API test.**
+
+## Data access
+
+- **Only the data layer touches the database**: DAOs, and read-only queries where the project has them. Routes,
+  controllers, stores and pages never build a query or import a table.
+- **One DAO per table**, created by the server entry and reached through the app's context; nothing else opens a
+  connection.
+- **Types are inferred from the schemas**, never written to mirror them.
+- **The data layer throws domain errors** (`NotFoundError`) and never an HTTP error; the HTTP layer maps them.
+- **Every DAO implements the one contract**: `get`, `list`, `create`, `update`, `delete`, each taking one input object;
+  every filtered read goes through `list` with the typed filter, never a custom finder such as `findBySlug`.
+- **A read across tables is a read-only query** offering the same `get` and `list`.
+- **Every list has a default sort, an `id` tie-breaker and a maximum page size.**
+- **A write across tables is a service method in one atomic unit** (a transaction, or the engine's batch where it has no
+  transactions); a batch over many rows is one statement.
+- **DAOs, queries and services are tested against the real database**, seeded through the data layer or a seed helper.
+
+## Testing
+
+- **Test a behaviour once, at the cheapest tier that can see it**; a higher tier covers only what the lower one cannot
+  see.
+- **No test for wiring without logic, or for what the compiler enforces**; a caller tests its own branches, not its
+  callee's rules.
+- **One top-level group per file, named for the module; each case a present-tense behaviour sentence; one behaviour per
+  case**, cases that differ only in data table-driven.
+- **Arrange, act, assert**, marked once a phase has more than one line.
+- **Fakes are small and hand-written; shared ones live in the test utilities.**
+- **Each test owns its data**: cleared before each test, seeded with fixed timestamps; end to end on its own database
+  and ports, through the real API, with unique names.
+- **Integration tests run on the production engine.**
+- **UI tests query by role and accessible name.**
+- **`test` runs the fast tier only**; run the slower tier that covers a change before merging it.
+
 ## Node
 
 - **Node 24 or newer.** ([Node.js release schedule](https://github.com/nodejs/release#release-schedule))
@@ -129,6 +216,61 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 - **Code Node runs as TypeScript imports with the `.ts` extension**, keeps type imports in their own `import type`
   statement, and avoids syntax Node cannot strip.
 - **Code compiled by `tsc` for Node imports with the `.js` extension.**
+
+## Express
+
+### Architecture
+
+```
+request ─► request log ─► cors ─► express.json() ─► route ─► controller
+errors:  next(err) ─► notFoundHandler ─► errorHandler ─► { status: 'error', message }
+```
+
+- **`server.ts` is the composition root**: it builds the context, starts the listener and shuts down cleanly.
+- **`app.ts` is a pure factory**: the context goes on `app.locals.context` once, handlers mount directly on the app
+  (no routers), and nothing in it reads the environment.
+
+### Building blocks
+
+| Block      | Lives in                                       | Is                                              | Must not                                                   |
+| ---------- | ---------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| controller | `controllers/<resource>.controller.ts`         | one exported `async (req, res, next)` per route | reach a dependency except through `req.app.locals.context` |
+| middleware | `middlewares/<name>.middleware.ts`             | `errorHandler` (terminal) and `notFoundHandler` | call a DAO                                                 |
+| context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext` and its typing on `Express.Locals` | —                                                          |
+| helper     | `helpers/<name>.helper.ts`                     | transport-agnostic functions                    | take an Express `Request`                                  |
+| model      | `models/<name>.model.ts`                       | types and error classes                         | contain logic                                              |
+
+### Controllers and errors
+
+- **Every handler has one shape**: `async (req, res, next): Promise<void>` with `try { … } catch (err) { next(err) }`.
+- **Every input is validated inline with `safeParse`**; a failure throws `createError(400, …, { expose: true, cause })`.
+  There are no shared validation helpers, so each handler shows every error it can produce.
+- **Errors leave a handler only through `next(err)`**; `errorHandler` writes `{ status: 'error', message }`, the message
+  only when the error is exposed.
+- **Naming**: handlers are verb + resource (`listEntities`, `getEntity`), never `entityController`; middlewares end in
+  `Handler`. Folders are plural, files keep the singular suffix (`controllers/entity.controller.ts`).
+
+### Testing the API
+
+- **Unit tests call handlers and middlewares as functions**, with a mock request (a stub context on
+  `req.app.locals.context`), a spy response and a spy next from the test utilities. They assert the response or the
+  error passed to `next`, and what the DAO received; every 400 also asserts the DAO was never called. No app, no
+  server.
+- **API tests serve the real app on an ephemeral port**, on the real DAO and a real database, and drive it over
+  `fetch`: every route's happy path, the errors only the real stack produces, and what `app.ts` adds
+  (malformed JSON → 400, over 100 kB → 413, an unmatched path → 404 in the standard shape).
+
+## Pino
+
+- **One logger in `src/logger.ts`**, writing JSON to stdout; nothing else creates one.
+- **The level comes from `LOG_LEVEL`**: `debug` by default, `info` in production, `silent` in tests.
+- **Errors are logged as `{ err }`** with a short message.
+- **Pretty output is a pipe in the `dev` script only**, never an import or a transport.
+
+## Express + Pino
+
+- **Every request is logged by `pino-http`**, the first middleware, on the one logger.
+- **Errors are logged once, by `errorHandler`, through `req.log`**: 5xx at `error`, 4xx at `warn`.
 
 ## ESLint
 
@@ -159,22 +301,6 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
 
 - **Formatting problems never reach `pnpm lint`**: `eslint-config-prettier` sits between the presets and the shared
   rules.
-
-## Testing
-
-- **Test a behaviour once, at the cheapest tier that can see it**; a higher tier covers only what the lower one cannot
-  see.
-- **No test for wiring without logic, or for what the compiler enforces**; a caller tests its own branches, not its
-  callee's rules.
-- **One top-level group per file, named for the module; each case a present-tense behaviour sentence; one behaviour per
-  case**, cases that differ only in data table-driven.
-- **Arrange, act, assert**, marked once a phase has more than one line.
-- **Fakes are small and hand-written; shared ones live in the test utilities.**
-- **Each test owns its data**: cleared before each test, seeded with fixed timestamps; end to end on its own database
-  and ports, through the real API, with unique names.
-- **Integration tests run on the production engine.**
-- **UI tests query by role and accessible name.**
-- **`test` runs the fast tier only**; run the slower tier that covers a change before merging it.
 
 ## Vitest
 

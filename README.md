@@ -65,24 +65,33 @@ Wear a warm coat, gloves and waterproof boots.
 ## How a message runs
 
 1. The CLI sends the line with `sendMessageStream`, in the conversation's `contextId`, and in its `taskId` when the agent is waiting for an answer.
-2. `WeatherAgentExecutor` publishes the task (`SUBMITTED`, then `WORKING`) and runs one Claude Agent SDK `query()`, resuming the Claude session it saved for that `contextId`.
-3. Claude calls `find_city` and `get_forecast`, two in-process MCP tools backed by Open-Meteo. It has no other tools, built-in ones included, and loads none of the machine's Claude settings. Each tool call is streamed as a `WORKING` update.
+2. `WeatherAgentExecutor` publishes the task (`SUBMITTED`, then `WORKING`) and runs one Claude Agent SDK `query()`, resuming the Claude session the `SessionStore` holds for that `contextId`.
+3. Claude calls `find_city` and `get_forecast`, two in-process MCP tools backed by the Open-Meteo client. It has no other tools, built-in ones included, and loads none of the machine's Claude settings. Each tool call is streamed as a `WORKING` update.
 4. As in the movie-agent sample, the answer's last line says how the turn ended. `COMPLETED` publishes the answer as a `forecast` artifact and ends the task. `AWAITING_USER_INPUT` ends it `INPUT_REQUIRED`, with the agent's question on the status.
 
-The code is in three folders: the agent in `src/server/`, the command line in `src/client/`, and what both use in `src/shared/`. The two apps meet only over A2A, and lint rejects an import from one into the other.
+## Layout
 
-| File                                                 | Does                                                                                            |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/server/main.ts`                                 | Starts the agent: configuration, tools, executor, card, Express                                 |
-| `src/server/weather-agent-executor.ts`               | The A2A `AgentExecutor`: one Claude turn per message, streaming, `input-required`, cancellation |
-| `src/server/claude-turn.ts`                          | One Claude Agent SDK `query()` and its messages as turn events                                  |
-| `src/server/weather-tools.ts`                        | The `find_city` and `get_forecast` tools                                                        |
-| `src/server/open-meteo.ts`                           | The Open-Meteo geocoding and forecast client, its answers validated with zod                    |
-| `src/server/weather-prompt.ts`                       | The system prompt and the end-of-turn marker                                                    |
-| `src/server/agent-card.ts`, `src/server/app.ts`      | The Agent Card and the Express app around the SDK's handlers                                    |
-| `src/client/main.ts`                                 | The command line: reads the card, sends each line, prints the events                            |
-| `src/client/conversation.ts`, `src/client/render.ts` | The conversation's ids between messages, and how events are printed                             |
-| `src/shared/config.ts`, `src/shared/a2a-text.ts`     | Required environment variables, and A2A text parts                                              |
+A pnpm workspace. The two apps meet only over A2A; what both use is in `packages/shared`.
+
+```text
+apps/server/src          the agent, an Express app
+  server.ts              composition root: configuration, clients, tools, executor, card, listener
+  app.ts                 createApp(context): logging, /health, the A2A card and JSON-RPC endpoint, 404 and errors
+  controllers/           health.controller.ts
+  middlewares/           not-found and error handlers
+  models/                types and errors: weather, turn events, AppContext
+  helpers/               Agent Card, A2A messages, weather codes and formatting
+  clients/               open-meteo.client.ts, claude.client.ts
+  tools/                 weather.tool.ts: find_city and get_forecast for Claude
+  prompts/               weather.prompt.ts: instructions and the end-of-turn marker
+  executors/             weather-agent.executor.ts: the A2A AgentExecutor
+  stores/                session.store.ts: the Claude session of each A2A context
+apps/client/src          the command line: main.ts, conversation.ts, render.ts
+packages/shared/src      configuration and A2A text parts
+tooling/                 the shared tsconfig and ESLint config
+```
+
+The server follows the Express building blocks; [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add one when a new kind of code appears.
 
 ## Checks
 
@@ -90,7 +99,11 @@ The code is in three folders: the agent in `src/server/`, the command line in `s
 pnpm typecheck && pnpm lint && pnpm test && pnpm format:check
 ```
 
-`pnpm test` never calls Claude or Open-Meteo: the tests run on recorded samples and fakes. The project's rules are in [`coding-conventions.md`](coding-conventions.md).
+```bash
+pnpm test:integration
+```
+
+`pnpm test` runs the unit tests of every package; `pnpm test:integration` drives the server's endpoints over HTTP. Neither calls Claude or Open-Meteo: the tests run on recorded samples and fakes.
 
 ## Notes
 
