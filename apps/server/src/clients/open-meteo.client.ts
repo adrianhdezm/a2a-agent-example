@@ -1,7 +1,10 @@
 import { z } from 'zod';
-import { OpenMeteoError } from './errors/open-meteo-error.ts';
+import { OpenMeteoError } from '../models/weather.model.ts';
+import type { DailyWeather, Forecast, Place, WeatherService } from '../models/weather.model.ts';
 
 export type Fetch = (url: string) => Promise<Response>;
+
+// The wire formats of the two Open-Meteo APIs, trimmed to the fields the client asks for.
 
 const placeSchema = z.object({
   name: z.string(),
@@ -10,7 +13,7 @@ const placeSchema = z.object({
   country: z.string().optional(),
   admin1: z.string().optional(),
   timezone: z.string().optional()
-});
+}) satisfies z.ZodType<Place>;
 
 const searchSchema = z.object({ results: z.array(placeSchema).optional() });
 
@@ -36,43 +39,6 @@ const forecastSchema = z.object({
 });
 
 const refusalSchema = z.object({ error: z.literal(true), reason: z.string() });
-
-/** A place the geocoding search found. */
-export type Place = z.infer<typeof placeSchema>;
-
-/** The weather now, in the place's local time; metric units. */
-export interface CurrentWeather {
-  time: string;
-  temperatureC: number;
-  feelsLikeC: number;
-  humidityPercent: number;
-  weatherCode: number;
-  windKmh: number;
-}
-
-/** One day of the forecast, in the place's local time; metric units. */
-export interface DailyWeather {
-  date: string;
-  weatherCode: number;
-  maxC: number;
-  minC: number;
-  /** The highest chance of rain or snow that day; absent where the model gives none. */
-  precipitationChancePercent?: number;
-  precipitationMm: number;
-  maxWindKmh: number;
-}
-
-export interface Forecast {
-  timezone: string;
-  current: CurrentWeather;
-  days: DailyWeather[];
-}
-
-/** The two Open-Meteo APIs the agent uses: geocoding and the forecast. Neither needs a key. */
-export interface OpenMeteo {
-  findPlaces(name: string): Promise<Place[]>;
-  forecast(latitude: number, longitude: number, days: number): Promise<Forecast>;
-}
 
 // Every way a request can fail (unreachable, refused, unreadable) becomes an OpenMeteoError naming the API.
 async function get<T>(what: string, fetchUrl: Fetch, url: string, schema: z.ZodType<T>): Promise<T> {
@@ -119,18 +85,29 @@ function toDays(daily: z.infer<typeof forecastSchema>['daily']): DailyWeather[] 
   });
 }
 
-/** The Open-Meteo client; `fetchUrl` is the global `fetch` unless a test hands in its own. */
-export function openMeteo(fetchUrl: Fetch = fetch): OpenMeteo {
+function toForecast(body: z.infer<typeof forecastSchema>): Forecast {
+  const c = body.current;
+  return {
+    timezone: body.timezone,
+    current: {
+      time: c.time,
+      temperatureC: c.temperature_2m,
+      feelsLikeC: c.apparent_temperature,
+      humidityPercent: c.relative_humidity_2m,
+      weatherCode: c.weather_code,
+      windKmh: c.wind_speed_10m
+    },
+    days: toDays(body.daily)
+  };
+}
+
+/** The Open-Meteo geocoding and forecast APIs, which need no key; `fetchUrl` is the global `fetch` unless a test hands in its own. */
+export function openMeteoClient(fetchUrl: Fetch = fetch): WeatherService {
   return {
     findPlaces: async (name) => {
       const query = new URLSearchParams({ name, count: '5', language: 'en', format: 'json' });
-      const body = await get(
-        'Open-Meteo geocoding',
-        fetchUrl,
-        `https://geocoding-api.open-meteo.com/v1/search?${query.toString()}`,
-        searchSchema
-      );
-      return body.results ?? [];
+      const url = `https://geocoding-api.open-meteo.com/v1/search?${query.toString()}`;
+      return (await get('Open-Meteo geocoding', fetchUrl, url, searchSchema)).results ?? [];
     },
     forecast: async (latitude, longitude, days) => {
       const query = new URLSearchParams({
@@ -141,20 +118,8 @@ export function openMeteo(fetchUrl: Fetch = fetch): OpenMeteo {
         timezone: 'auto',
         forecast_days: String(days)
       });
-      const body = await get('Open-Meteo forecast', fetchUrl, `https://api.open-meteo.com/v1/forecast?${query.toString()}`, forecastSchema);
-      const c = body.current;
-      return {
-        timezone: body.timezone,
-        current: {
-          time: c.time,
-          temperatureC: c.temperature_2m,
-          feelsLikeC: c.apparent_temperature,
-          humidityPercent: c.relative_humidity_2m,
-          weatherCode: c.weather_code,
-          windKmh: c.wind_speed_10m
-        },
-        days: toDays(body.daily)
-      };
+      const url = `https://api.open-meteo.com/v1/forecast?${query.toString()}`;
+      return toForecast(await get('Open-Meteo forecast', fetchUrl, url, forecastSchema));
     }
   };
 }

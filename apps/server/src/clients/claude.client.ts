@@ -1,14 +1,5 @@
 import type { McpServerConfig, Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-
-/** What one Claude turn reports, reduced to what the A2A side needs. */
-export type TurnEvent =
-  /** The Claude session the turn runs in; the next turn in the same conversation resumes it. */
-  | { type: 'session'; sessionId: string }
-  /** Something the agent is doing on the way to its answer: text before a tool call, or the call itself. */
-  | { type: 'progress'; text: string }
-  /** The end of the turn: the answer, or why there is none. */
-  | { type: 'result'; ok: true; text: string }
-  | { type: 'result'; ok: false; error: string };
+import type { TurnEvent, TurnRequest } from '../models/turn.model.ts';
 
 /** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
 export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
@@ -23,13 +14,6 @@ export interface ClaudeTurnSettings {
   /** The most model round trips one turn may take. */
   maxTurns: number;
   query: ClaudeQuery;
-}
-
-export interface TurnRequest {
-  prompt: string;
-  /** The Claude session to resume; a new one starts without it. */
-  sessionId?: string;
-  abortController: AbortController;
 }
 
 function describeToolCall(name: string, input: unknown): string {

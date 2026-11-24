@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { OpenMeteoError } from '../../src/errors/open-meteo-error.ts';
-import type { Forecast, OpenMeteo, Place } from '../../src/open-meteo.ts';
-import { findCityTool, formatForecast, formatPlaces, getForecastTool, weatherToolNames } from '../../src/weather-tools.ts';
+import { formatForecast, formatPlaces } from '../../../src/helpers/weather-format.helper.ts';
+import { OpenMeteoError } from '../../../src/models/weather.model.ts';
+import type { Forecast, Place, WeatherService } from '../../../src/models/weather.model.ts';
+import { findCityTool, getForecastTool, weatherToolNames } from '../../../src/tools/weather.tool.ts';
 
 const lisbon: Place = {
   name: 'Lisbon',
@@ -21,36 +22,13 @@ const forecast: Forecast = {
   ]
 };
 
-function fakeWeather(overrides: Partial<OpenMeteo> = {}): OpenMeteo {
+function fakeWeather(overrides: Partial<WeatherService> = {}): WeatherService {
   return { findPlaces: () => Promise.resolve([lisbon]), forecast: () => Promise.resolve(forecast), ...overrides };
 }
 
-describe('weather-tools', () => {
+describe('weather.tool', () => {
   it('names the tools as Claude sees them on the weather server', () => {
     expect(weatherToolNames).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
-  });
-
-  describe('formatPlaces', () => {
-    it('gives each place its region, country, coordinates and time zone', () => {
-      expect(formatPlaces('Lisbon', [lisbon])).toBe(
-        'Lisbon, Lisbon District, Portugal (latitude 38.72509, longitude -9.1498, time zone Europe/Lisbon)'
-      );
-    });
-
-    it('says when no place has the name', () => {
-      expect(formatPlaces('Atlantis', [])).toBe('No place named "Atlantis" was found.');
-    });
-  });
-
-  describe('formatForecast', () => {
-    it('describes the weather now and each day in words and metric units', () => {
-      expect(formatForecast(forecast).split('\n')).toEqual([
-        'Time zone: Europe/Lisbon',
-        'Now (2026-11-24T10:00): light rain, 15.2 °C, feels like 13.9 °C, humidity 81%, wind 18.4 km/h',
-        '2026-11-24: light rain, 11.3 to 16.8 °C, 85% chance of precipitation, 6.2 mm, wind up to 27.5 km/h',
-        '2026-11-25: partly cloudy, 10.9 to 18.1 °C, 0 mm, wind up to 14 km/h'
-      ]);
-    });
   });
 
   describe('find_city', () => {

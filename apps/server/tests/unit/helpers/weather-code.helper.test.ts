@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeWeatherCode } from '../../src/weather-codes.ts';
+import { describeWeatherCode } from '../../../src/helpers/weather-code.helper.ts';
 
 describe('describeWeatherCode', () => {
   it.each([

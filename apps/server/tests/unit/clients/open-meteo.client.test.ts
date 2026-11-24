@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OpenMeteoError } from '../../src/errors/open-meteo-error.ts';
-import { openMeteo } from '../../src/open-meteo.ts';
-import { lisbonForecast, lisbonSearch, rateLimited } from '../fixtures/open-meteo.ts';
+import { OpenMeteoError } from '../../../src/models/weather.model.ts';
+import { openMeteoClient } from '../../../src/clients/open-meteo.client.ts';
+import { lisbonForecast, lisbonSearch, rateLimited } from '../../fixtures/open-meteo.ts';
 
 function answering(body: unknown, status = 200) {
   const requested: URL[] = [];
@@ -9,10 +9,10 @@ function answering(body: unknown, status = 200) {
     requested.push(new URL(url));
     return Promise.resolve(Response.json(body, { status }));
   };
-  return { requested, client: openMeteo(fetchUrl) };
+  return { requested, client: openMeteoClient(fetchUrl) };
 }
 
-describe('openMeteo', () => {
+describe('openMeteoClient', () => {
   describe('findPlaces', () => {
     it('searches the geocoding API by name and answers the places it finds', async () => {
       const { requested, client } = answering(lisbonSearch);
@@ -89,7 +89,7 @@ describe('openMeteo', () => {
   });
 
   it('names the API it could not reach', async () => {
-    const client = openMeteo(() => Promise.reject(new TypeError('fetch failed')));
+    const client = openMeteoClient(() => Promise.reject(new TypeError('fetch failed')));
 
     await expect(client.findPlaces('Lisbon')).rejects.toThrow(
       new OpenMeteoError('Open-Meteo geocoding could not be reached: fetch failed')

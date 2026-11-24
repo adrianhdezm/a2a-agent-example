@@ -1,8 +1,9 @@
 import type { McpServerConfig, Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
-import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../../src/claude-turn.ts';
-import type { ClaudeTurnSettings, TurnEvent } from '../../src/claude-turn.ts';
-import { answer, init, maxTurns, sessionId, success, toolCall } from '../fixtures/claude-messages.ts';
+import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../../../src/clients/claude.client.ts';
+import type { ClaudeTurnSettings } from '../../../src/clients/claude.client.ts';
+import type { TurnEvent } from '../../../src/models/turn.model.ts';
+import { answer, init, maxTurns, sessionId, success, toolCall } from '../../fixtures/claude-messages.ts';
 
 function settings(messages: SDKMessage[] = []) {
   const calls: { prompt: string; options: Options }[] = [];
@@ -29,7 +30,7 @@ async function collect(events: AsyncIterable<TurnEvent>): Promise<TurnEvent[]> {
   return collected;
 }
 
-describe('claude-turn', () => {
+describe('claude.client', () => {
   describe('translateClaudeMessage', () => {
     it('reports the session the init message announces', () => {
       expect(translateClaudeMessage(init)).toEqual([{ type: 'session', sessionId }]);

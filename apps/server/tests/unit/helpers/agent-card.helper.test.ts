@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { weatherAgentCard } from '../../src/agent-card.ts';
+import { weatherAgentCard } from '../../../src/helpers/agent-card.helper.ts';
 
 describe('weatherAgentCard', () => {
   it('serves one JSON-RPC interface on protocol 1.0 under the base URL', () => {

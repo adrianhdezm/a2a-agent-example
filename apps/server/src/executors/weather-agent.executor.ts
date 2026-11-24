@@ -2,13 +2,12 @@ import { TaskState } from '@a2a-js/sdk';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { partsText } from '@a2a-agent-example/shared';
-import { forecastArtifact, statusUpdate, submittedTask } from './a2a-messages.ts';
-import type { TaskIds } from './a2a-messages.ts';
-import type { TurnEvent, TurnRequest } from './claude-turn.ts';
-import { readTurnEnd } from './weather-prompt.ts';
-
-/** Runs one agent turn: `runClaudeTurn` with its settings bound, or a fake in tests. */
-export type RunTurn = (request: TurnRequest) => AsyncIterable<TurnEvent>;
+import { forecastArtifact, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
+import type { TaskIds } from '../helpers/a2a-message.helper.ts';
+import { logger } from '../logger.ts';
+import type { RunTurn } from '../models/turn.model.ts';
+import { readTurnEnd } from '../prompts/weather.prompt.ts';
+import type { SessionStore } from '../stores/session.store.ts';
 
 /** How a turn ended, as the task's final state and the text that goes with it. */
 interface TurnEnd {
@@ -23,11 +22,12 @@ interface TurnEnd {
  */
 export class WeatherAgentExecutor implements AgentExecutor {
   readonly #runTurn: RunTurn;
-  readonly #sessions = new Map<string, string>();
+  readonly #sessions: SessionStore;
   readonly #running = new Map<string, AbortController>();
 
-  constructor(runTurn: RunTurn) {
+  constructor(runTurn: RunTurn, sessions: SessionStore) {
     this.#runTurn = runTurn;
+    this.#sessions = sessions;
   }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
@@ -76,6 +76,12 @@ export class WeatherAgentExecutor implements AgentExecutor {
 
   // A completed answer becomes the `forecast` artifact; a question, a failure or a cancellation rides on the status.
   #publishEnd(ids: TaskIds, end: TurnEnd, eventBus: ExecutionEventBus): void {
+    const fields = { ...ids, state: TaskState[end.state] };
+    if (end.state === TaskState.TASK_STATE_FAILED) {
+      logger.warn({ ...fields, error: end.text }, 'turn failed');
+    } else {
+      logger.info(fields, 'turn ended');
+    }
     if (end.state === TaskState.TASK_STATE_COMPLETED) {
       eventBus.publish(AgentEvent.artifactUpdate(forecastArtifact(ids, end.text)));
       eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, end.state)));

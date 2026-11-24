@@ -15,6 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "test:integration": "pnpm -r test:integration",
     "format": "prettier --write --log-level warn \"*.{json,md,yaml}\" && pnpm -r format",
     "format:check": "prettier --check --log-level warn \"*.{json,md,yaml}\" && pnpm -r format:check"
   },

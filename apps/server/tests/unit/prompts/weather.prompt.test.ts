@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readTurnEnd, weatherInstructions } from '../../src/weather-prompt.ts';
+import { readTurnEnd, weatherInstructions } from '../../../src/prompts/weather.prompt.ts';
 
-describe('weather-prompt', () => {
+describe('weather.prompt', () => {
   describe('weatherInstructions', () => {
     it("dates the instructions and asks for the turn's marker on the last line", () => {
       const instructions = weatherInstructions(new Date('2026-11-24T10:00:00Z'));
