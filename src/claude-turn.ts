@@ -1,0 +1,91 @@
+import type { McpServerConfig, Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+
+/** What one Claude turn reports, reduced to what the A2A side needs. */
+export type TurnEvent =
+  /** The Claude session the turn runs in; the next turn in the same conversation resumes it. */
+  | { type: 'session'; sessionId: string }
+  /** Something the agent is doing on the way to its answer: text before a tool call, or the call itself. */
+  | { type: 'progress'; text: string }
+  /** The end of the turn: the answer, or why there is none. */
+  | { type: 'result'; ok: true; text: string }
+  | { type: 'result'; ok: false; error: string };
+
+/** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
+export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
+
+export interface ClaudeTurnSettings {
+  apiKey: string;
+  /** The system prompt, built per turn so it can carry today's date. */
+  systemPrompt: () => string;
+  /** The in-process MCP server with the agent's tools, and the tool names Claude may call without asking. */
+  mcpServers: Record<string, McpServerConfig>;
+  allowedTools: string[];
+  /** The most model round trips one turn may take. */
+  maxTurns: number;
+  query: ClaudeQuery;
+}
+
+export interface TurnRequest {
+  prompt: string;
+  /** The Claude session to resume; a new one starts without it. */
+  sessionId?: string;
+  abortController: AbortController;
+}
+
+function describeToolCall(name: string, input: unknown): string {
+  const tool = name.replace(/^mcp__[^_]+__/, '');
+  return `Calling ${tool} ${JSON.stringify(input)}`;
+}
+
+/**
+ * The turn events one SDK message stands for. An assistant message that calls tools reports its text and its calls
+ * as progress; one that does not is the answer, which the `result` message carries, so it reports nothing.
+ */
+export function translateClaudeMessage(message: SDKMessage): TurnEvent[] {
+  if (message.type === 'system' && message.subtype === 'init') {
+    return [{ type: 'session', sessionId: message.session_id }];
+  }
+  if (message.type === 'assistant') {
+    const blocks = message.message.content;
+    if (!blocks.some((block) => block.type === 'tool_use')) {
+      return [];
+    }
+    return blocks.flatMap((block): TurnEvent[] => {
+      if (block.type === 'text' && block.text.trim() !== '') {
+        return [{ type: 'progress', text: block.text.trim() }];
+      }
+      return block.type === 'tool_use' ? [{ type: 'progress', text: describeToolCall(block.name, block.input) }] : [];
+    });
+  }
+  if (message.type === 'result') {
+    return message.subtype === 'success'
+      ? [{ type: 'result', ok: true, text: message.result }]
+      : [{ type: 'result', ok: false, error: message.errors.join('\n') || message.subtype }];
+  }
+  return [];
+}
+
+/** The SDK options for one turn: the agent's own tools only, no built-in ones, and none of the machine's settings. */
+export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest): Options {
+  return {
+    systemPrompt: settings.systemPrompt(),
+    resume: request.sessionId,
+    abortController: request.abortController,
+    mcpServers: settings.mcpServers,
+    // No built-in tools (files, shell, web): the agent works only through its own.
+    tools: [],
+    allowedTools: settings.allowedTools,
+    // An agent served to others must not pick up the CLAUDE.md files or settings of whatever machine runs it.
+    settingSources: [],
+    maxTurns: settings.maxTurns,
+    // The SDK replaces the child process's environment with this one, so it keeps the rest of ours (PATH, HOME).
+    env: { ...process.env, ANTHROPIC_API_KEY: settings.apiKey }
+  };
+}
+
+/** Runs one Claude turn and yields what it reports; aborting the request's controller stops it. */
+export async function* runClaudeTurn(settings: ClaudeTurnSettings, request: TurnRequest): AsyncIterable<TurnEvent> {
+  for await (const message of settings.query({ prompt: request.prompt, options: claudeOptions(settings, request) })) {
+    yield* translateClaudeMessage(message);
+  }
+}
