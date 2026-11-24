@@ -6,6 +6,7 @@ alike. The code follows every rule here; a change that breaks one changes this f
 
 ## Contents
 
+- [This project](#this-project)
 - [Node package](#node-package)
 - [Code style](#code-style)
 - [pnpm](#pnpm)
@@ -18,6 +19,31 @@ alike. The code follows every rule here; a change that breaks one changes this f
 - [ESLint + Prettier](#eslint--prettier)
 - [Testing](#testing)
 - [Vitest](#vitest)
+
+## This project
+
+A weather agent on the Claude Agent SDK, served over A2A 1.0, and an interactive A2A client, in one Node package. What the docs below do not say about it, and every place it departs from them, with the reason.
+
+### Layout
+
+| Path                                                                | Holds                                                                                                                   |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `src/server.ts`                                                     | entry point of the agent: reads `PORT` and `ANTHROPIC_API_KEY`, wires the tools, the executor and the card, and listens |
+| `src/cli.ts`                                                        | entry point of the client: reads the agent's card, then one streamed A2A message per line typed                         |
+| `src/app.ts`, `src/agent-card.ts`                                   | the Express app with the SDK's card and JSON-RPC handlers; the Agent Card                                               |
+| `src/weather-agent-executor.ts`                                     | the A2A `AgentExecutor`: one Claude turn per message, in the Claude session of its `contextId`                          |
+| `src/claude-turn.ts`                                                | one Claude Agent SDK `query()`, its options, and its messages reduced to turn events                                    |
+| `src/weather-tools.ts`, `src/open-meteo.ts`, `src/weather-codes.ts` | the `find_city` and `get_forecast` tools, the Open-Meteo client they call, and weather codes in words                   |
+| `src/weather-prompt.ts`                                             | the system prompt and the `COMPLETED` / `AWAITING_USER_INPUT` marker on an answer's last line                           |
+| `src/a2a-messages.ts`                                               | builders for A2A 1.0 messages, tasks, status updates and the `forecast` artifact                                        |
+| `src/conversation.ts`, `src/render.ts`                              | the client's `contextId` and `taskId` between messages; stream events as terminal lines                                 |
+
+### Exceptions
+
+- **Two entry points, `src/server.ts` and `src/cli.ts`**, not one `src/main.ts`: the agent and its client stay in one package while the project is small. `start` and `dev` run the agent, `cli` runs the client. When either grows, it becomes its own package.
+- **It listens on `PORT`** (41241 in `.env.example`, the port of the a2a-js samples), which the Node package blueprint's "nothing listens" does not cover.
+- **No tests for `server.ts`, `cli.ts` or `app.ts`**: the entry points only wire, and `app.ts` only mounts the SDK's handlers. Running the agent and the client end to end covers them.
+- **`pnpm test` never calls Claude or Open-Meteo**: the turn runner, the query, the Open-Meteo client and its `fetch` are all handed in, so tests use recorded samples and fakes.
 
 ## Node package
 
