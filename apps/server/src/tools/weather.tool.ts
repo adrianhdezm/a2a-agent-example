@@ -21,7 +21,8 @@ function text(value: string, isError = false): TextResult {
 // A refusal from Open-Meteo goes back to Claude as a tool error it can explain; anything else is a bug and propagates.
 async function answer(produce: () => Promise<string>): Promise<TextResult> {
   try {
-    return text(await produce());
+    const value = await produce();
+    return text(value);
   } catch (error) {
     if (error instanceof OpenMeteoError) {
       return text(error.message, true);
@@ -36,7 +37,11 @@ export function findCityTool(weather: WeatherService) {
     'find_city',
     'Finds the places with a given name and returns their region, country, coordinates and time zone. Use it before get_forecast.',
     { name: z.string().min(1).describe('The city or place name, for example "Lisbon" or "Springfield"') },
-    ({ name }) => answer(async () => formatPlaces(name, await weather.findPlaces(name)))
+    ({ name }) =>
+      answer(async () => {
+        const places = await weather.findPlaces(name);
+        return formatPlaces(name, places);
+      })
   );
 }
 
@@ -50,7 +55,11 @@ export function getForecastTool(weather: WeatherService) {
       longitude: z.number().min(-180).max(180),
       days: z.number().int().min(1).max(7).describe('How many days to forecast, starting today')
     },
-    ({ latitude, longitude, days }) => answer(async () => formatForecast(await weather.forecast(latitude, longitude, days)))
+    ({ latitude, longitude, days }) =>
+      answer(async () => {
+        const forecast = await weather.forecast(latitude, longitude, days);
+        return formatForecast(forecast);
+      })
   );
 }
 

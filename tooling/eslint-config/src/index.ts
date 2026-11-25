@@ -56,17 +56,28 @@ export function config({ tsconfigRootDir }: ConfigOptions) {
         // Clarity and simplicity
         'no-else-return': 'warn',
         'no-nested-ternary': 'warn',
-        'no-unneeded-ternary': 'warn'
+        'no-unneeded-ternary': 'warn',
+        // An awaited result passed straight into a call hides a step that can take long and fail: name it first.
+        // A package that sets its own no-restricted-syntax replaces this one, so it repeats the selector.
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: 'CallExpression > AwaitExpression.arguments, NewExpression > AwaitExpression.arguments',
+            message: 'Await into a named const first, then pass the const.'
+          }
+        ]
       }
     },
     {
-      // A describe holds every case for one module, so the size guardrails do not apply, and tests may assert.
+      // A describe holds every case for one module, so the size guardrails do not apply, tests may assert, and
+      // expect(await …) is the test runner's own idiom.
       files: ['tests/**/*.ts'],
       rules: {
         'max-lines-per-function': 'off',
         'max-nested-callbacks': 'off',
         'max-statements': 'off',
-        '@typescript-eslint/consistent-type-assertions': 'off'
+        '@typescript-eslint/consistent-type-assertions': 'off',
+        'no-restricted-syntax': 'off'
       }
     }
   );

@@ -72,6 +72,12 @@ Code that does not fit a block above is a new concept, and the structure grows t
 
 From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check` are the required checks; `pnpm test:integration` runs the server's API tests. `pnpm dev` and `pnpm start` run the agent, `pnpm cli` the command line.
 
+### Lint additions
+
+Rules `tooling/eslint-config` adds to the shared ones below, for every package:
+
+- **No `await` as a call argument** (`no-restricted-syntax`, an error): `publishEnd(ids, await runOneTurn(…), bus)` hides a step that can take long and fail, so the awaited value gets a name first: `const end = await runOneTurn(…)`, then `publishEnd(ids, end, bus)`. Tests are exempt, since `expect(await response.json())` is the test runner's own idiom. A package that sets its own `no-restricted-syntax` replaces this one, so it repeats the selector.
+
 ### Exceptions
 
 - **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.

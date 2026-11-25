@@ -119,7 +119,8 @@ export function openMeteoClient(fetchUrl: Fetch = fetch): WeatherService {
         forecast_days: String(days)
       });
       const url = `https://api.open-meteo.com/v1/forecast?${query.toString()}`;
-      return toForecast(await get('Open-Meteo forecast', fetchUrl, url, forecastSchema));
+      const body = await get('Open-Meteo forecast', fetchUrl, url, forecastSchema);
+      return toForecast(body);
     }
   };
 }

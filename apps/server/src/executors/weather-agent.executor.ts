@@ -36,7 +36,8 @@ export class WeatherAgentExecutor implements AgentExecutor {
     const abortController = new AbortController();
     this.#running.set(ids.taskId, abortController);
     try {
-      this.#publishEnd(ids, await this.#runOneTurn(ids, partsText(context.userMessage.parts), abortController, eventBus), eventBus);
+      const end = await this.#runOneTurn(ids, partsText(context.userMessage.parts), abortController, eventBus);
+      this.#publishEnd(ids, end, eventBus);
     } catch (error) {
       const end = abortController.signal.aborted
         ? { state: TaskState.TASK_STATE_CANCELED, text: 'Cancelled.' }
