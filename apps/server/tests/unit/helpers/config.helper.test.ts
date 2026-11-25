@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { readPort, requireVariable } from '../src/config.ts';
-import { ConfigError } from '../src/errors/config-error.ts';
+import { readPort, requireVariable } from '../../../src/helpers/config.helper.ts';
+import { ConfigError } from '../../../src/models/config.model.ts';
 
-describe('config', () => {
+describe('config.helper', () => {
   it('reads a variable that is set', () => {
     expect(requireVariable({ ANTHROPIC_API_KEY: 'sk-ant-test' }, 'ANTHROPIC_API_KEY')).toBe('sk-ant-test');
   });

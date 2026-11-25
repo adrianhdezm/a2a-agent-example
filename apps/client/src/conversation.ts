@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { SendMessageRequest, StreamResponse } from '@a2a-js/sdk';
-import { textPart } from '@a2a-agent-example/shared';
 
 // States after which a task takes no more messages; the next message starts a new task in the same context.
 const finalStates = new Set<TaskState>([
@@ -37,7 +36,7 @@ export class Conversation {
         contextId: this.#contextId ?? '',
         taskId: this.#taskId ?? '',
         role: Role.ROLE_USER,
-        parts: [textPart(text)],
+        parts: [{ content: { $case: 'text', value: text }, metadata: undefined, filename: '', mediaType: 'text/plain' }],
         metadata: undefined,
         extensions: [],
         referenceTaskIds: []

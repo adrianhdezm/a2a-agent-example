@@ -1,4 +1,4 @@
-import { ConfigError } from './errors/config-error.ts';
+import { ConfigError } from '../models/config.model.ts';
 
 type Environment = Record<string, string | undefined>;
 

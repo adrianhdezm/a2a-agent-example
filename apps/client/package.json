@@ -22,7 +22,6 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@a2a-agent-example/shared": "workspace:*",
     "@a2a-js/sdk": "catalog:"
   }
 }

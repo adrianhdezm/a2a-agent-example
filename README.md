@@ -71,7 +71,7 @@ Wear a warm coat, gloves and waterproof boots.
 
 ## Layout
 
-A pnpm workspace. The two apps meet only over A2A; what both use is in `packages/shared`.
+A pnpm workspace. The two apps meet only over A2A and never import each other.
 
 ```text
 apps/server/src          the agent, an Express app
@@ -87,7 +87,6 @@ apps/server/src          the agent, an Express app
   executors/             weather-agent.executor.ts: the A2A AgentExecutor
   stores/                session.store.ts: the Claude session of each A2A context
 apps/client/src          the command line: main.ts, conversation.ts, render.ts
-packages/shared/src      configuration and A2A text parts
 tooling/                 the shared tsconfig and ESLint config
 ```
 

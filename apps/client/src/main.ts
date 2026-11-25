@@ -1,13 +1,21 @@
 import { createInterface } from 'node:readline/promises';
 import { styleText } from 'node:util';
 import { ClientFactory } from '@a2a-js/sdk/client';
-import { requireVariable } from '@a2a-agent-example/shared';
 import { Conversation } from './conversation.ts';
 import { renderEvent } from './render.ts';
 import type { Style } from './render.ts';
 
-// The agent's URL is the first argument; without one, the server this repository runs, on the PORT in .env.
-const agentUrl = process.argv[2] ?? `http://localhost:${requireVariable(process.env, 'PORT')}`;
+// The agent's URL is the first argument; without one, the server this repository runs, on the PORT in .env, which
+// must then be set: there is no fallback port.
+function serverUrl(): string {
+  const port = process.env.PORT;
+  if (port === undefined || port === '') {
+    throw new Error('PORT is not set: set it in .env (see .env.example), or pass the agent URL as the first argument');
+  }
+  return `http://localhost:${port}`;
+}
+
+const agentUrl = process.argv[2] ?? serverUrl();
 const style: Style = (format, text) => styleText(format, text);
 
 const client = await new ClientFactory().createFromUrl(agentUrl);

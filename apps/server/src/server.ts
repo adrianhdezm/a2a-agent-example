@@ -1,5 +1,4 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { readPort, requireVariable } from '@a2a-agent-example/shared';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { createApp } from './app.ts';
 import { runClaudeTurn } from './clients/claude.client.ts';
@@ -7,6 +6,7 @@ import type { ClaudeTurnSettings } from './clients/claude.client.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
 import { WeatherAgentExecutor } from './executors/weather-agent.executor.ts';
 import { agentPaths, weatherAgentCard } from './helpers/agent-card.helper.ts';
+import { readPort, requireVariable } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
 import { weatherInstructions } from './prompts/weather.prompt.ts';
 import { SessionStore } from './stores/session.store.ts';

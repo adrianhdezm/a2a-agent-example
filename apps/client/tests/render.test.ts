@@ -91,6 +91,37 @@ describe('renderEvent', () => {
     expect(renderEvent(event, style)).toBe('<cyan>Agent: Take an umbrella.');
   });
 
+  it('shows only the text of an artifact that also carries other parts', () => {
+    const map = {
+      content: { $case: 'url' as const, value: 'https://example.com/map.png' },
+      metadata: undefined,
+      filename: 'map.png',
+      mediaType: 'image/png'
+    };
+    const event: StreamResponse = {
+      payload: {
+        $case: 'artifactUpdate',
+        value: {
+          taskId: 'task-1',
+          contextId: 'context-1',
+          artifact: {
+            artifactId: 'a-1',
+            name: 'forecast',
+            description: '',
+            parts: [text('Rain all day.'), map, text('Take an umbrella.')],
+            metadata: undefined,
+            extensions: []
+          },
+          append: false,
+          lastChunk: true,
+          metadata: undefined
+        }
+      }
+    };
+
+    expect(renderEvent(event, style)).toBe('<cyan>Agent: Rain all day.\nTake an umbrella.');
+  });
+
   it.each([
     ['a working update without text', status(TaskState.TASK_STATE_WORKING)],
     [

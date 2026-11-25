@@ -1,9 +1,13 @@
 import { TaskState } from '@a2a-js/sdk';
-import type { StreamResponse } from '@a2a-js/sdk';
-import { partsText } from '@a2a-agent-example/shared';
+import type { Part, StreamResponse } from '@a2a-js/sdk';
 
 /** The styles the CLI uses; `node:util`'s `styleText` in a terminal, plain text in tests. */
 export type Style = (format: 'dim' | 'cyan' | 'green' | 'yellow' | 'red', text: string) => string;
+
+// The text of some parts, one line per text part; parts that are not text are left out.
+function partsText(parts: readonly Part[] | undefined): string {
+  return (parts ?? []).flatMap(({ content }) => (content?.$case === 'text' ? [content.value] : [])).join('\n');
+}
 
 function renderStatus(state: TaskState | undefined, text: string, style: Style): string | undefined {
   switch (state) {
