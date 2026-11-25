@@ -17,13 +17,13 @@ const question: TurnEvent[] = [
   { type: 'result', ok: true, text: 'Which Springfield?\nAWAITING_USER_INPUT' }
 ];
 
-function message(text: string, ids: { contextId?: string; taskId?: string } = {}): SendMessageRequest {
+function message(text: string, taskRef: { contextId?: string; taskId?: string } = {}): SendMessageRequest {
   return {
     tenant: '',
     message: {
       messageId: crypto.randomUUID(),
-      contextId: ids.contextId ?? '',
-      taskId: ids.taskId ?? '',
+      contextId: taskRef.contextId ?? '',
+      taskId: taskRef.taskId ?? '',
       role: Role.ROLE_USER,
       parts: [{ content: { $case: 'text', value: text }, metadata: undefined, filename: '', mediaType: 'text/plain' }],
       metadata: undefined,

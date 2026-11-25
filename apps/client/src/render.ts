@@ -11,7 +11,8 @@ export interface RenderOptions {
   now: () => Date;
 }
 
-interface TaskIds {
+// Which task, in which conversation (context), an event belongs to.
+interface TaskRef {
   taskId: string;
   contextId: string;
 }
@@ -28,8 +29,8 @@ function stateName(status: TaskStatus | undefined): string {
 }
 
 // The line verbose mode prints above an event: when it arrived, and which task and context it belongs to.
-function header(what: string, ids: TaskIds, { style, now }: RenderOptions): string {
-  return style('magenta', `[${now().toTimeString().slice(0, 8)}] ${what} · task ${ids.taskId} · context ${ids.contextId}`);
+function header(what: string, taskRef: TaskRef, { style, now }: RenderOptions): string {
+  return style('magenta', `[${now().toTimeString().slice(0, 8)}] ${what} · task ${taskRef.taskId} · context ${taskRef.contextId}`);
 }
 
 function compactStatus(state: TaskState | undefined, text: string, style: Style): string | undefined {
@@ -63,9 +64,9 @@ function renderStatus(update: TaskStatusUpdateEvent, options: RenderOptions): st
 }
 
 // What the agent answers, as an artifact or a message, headed in verbose mode by where it came from.
-function renderAnswer(what: string, ids: TaskIds, parts: Part[] | undefined, options: RenderOptions): string {
+function renderAnswer(what: string, taskRef: TaskRef, parts: Part[] | undefined, options: RenderOptions): string {
   const line = `${options.style('cyan', 'Agent:')} ${renderParts(parts, options.style)}`;
-  return options.verbose ? `${header(what, ids, options)}\n${line}` : line;
+  return options.verbose ? `${header(what, taskRef, options)}\n${line}` : line;
 }
 
 /** The line or lines to print for one event the agent streams back; nothing for events with nothing to show. */

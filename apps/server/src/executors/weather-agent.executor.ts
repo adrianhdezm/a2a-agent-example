@@ -2,7 +2,7 @@ import { TaskState } from '@a2a-js/sdk';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { forecastArtifact, partsText, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
-import type { TaskIds } from '../helpers/a2a-message.helper.ts';
+import type { TaskRef } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../logger.ts';
 import type { RunTurn } from '../models/turn.model.ts';
 import { readTurnEnd } from '../prompts/weather.prompt.ts';
@@ -30,21 +30,21 @@ export class WeatherAgentExecutor implements AgentExecutor {
   }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
-    const ids = { taskId: context.taskId, contextId: context.contextId };
-    eventBus.publish(AgentEvent.task(context.task ?? submittedTask(ids, context.userMessage)));
-    eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, TaskState.TASK_STATE_WORKING, 'Looking into it…')));
+    const taskRef = { taskId: context.taskId, contextId: context.contextId };
+    eventBus.publish(AgentEvent.task(context.task ?? submittedTask(taskRef, context.userMessage)));
+    eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, TaskState.TASK_STATE_WORKING, 'Looking into it…')));
     const abortController = new AbortController();
-    this.#running.set(ids.taskId, abortController);
+    this.#running.set(taskRef.taskId, abortController);
     try {
-      const end = await this.#runOneTurn(ids, partsText(context.userMessage.parts), abortController, eventBus);
-      this.#publishEnd(ids, end, eventBus);
+      const end = await this.#runOneTurn(taskRef, partsText(context.userMessage.parts), abortController, eventBus);
+      this.#publishEnd(taskRef, end, eventBus);
     } catch (error) {
       const end = abortController.signal.aborted
         ? { state: TaskState.TASK_STATE_CANCELED, text: 'Cancelled.' }
         : { state: TaskState.TASK_STATE_FAILED, text: `Agent error: ${error instanceof Error ? error.message : String(error)}` };
-      this.#publishEnd(ids, end, eventBus);
+      this.#publishEnd(taskRef, end, eventBus);
     } finally {
-      this.#running.delete(ids.taskId);
+      this.#running.delete(taskRef.taskId);
       eventBus.finished();
     }
   }
@@ -55,16 +55,16 @@ export class WeatherAgentExecutor implements AgentExecutor {
     return Promise.resolve();
   }
 
-  async #runOneTurn(ids: TaskIds, prompt: string, abortController: AbortController, eventBus: ExecutionEventBus): Promise<TurnEnd> {
-    const sessionId = this.#sessions.get(ids.contextId);
+  async #runOneTurn(taskRef: TaskRef, prompt: string, abortController: AbortController, eventBus: ExecutionEventBus): Promise<TurnEnd> {
+    const sessionId = this.#sessions.get(taskRef.contextId);
     const turn = this.#runTurn({ prompt, sessionId, abortController });
     for await (const event of turn) {
       switch (event.type) {
         case 'session':
-          this.#sessions.set(ids.contextId, event.sessionId);
+          this.#sessions.set(taskRef.contextId, event.sessionId);
           break;
         case 'progress':
-          eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, TaskState.TASK_STATE_WORKING, event.text)));
+          eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, TaskState.TASK_STATE_WORKING, event.text)));
           break;
         case 'result': {
           if (!event.ok) {
@@ -84,18 +84,18 @@ export class WeatherAgentExecutor implements AgentExecutor {
   }
 
   // A completed answer becomes the `forecast` artifact; a question, a failure or a cancellation rides on the status.
-  #publishEnd(ids: TaskIds, end: TurnEnd, eventBus: ExecutionEventBus): void {
-    const fields = { ...ids, state: TaskState[end.state] };
+  #publishEnd(taskRef: TaskRef, end: TurnEnd, eventBus: ExecutionEventBus): void {
+    const fields = { ...taskRef, state: TaskState[end.state] };
     if (end.state === TaskState.TASK_STATE_FAILED) {
       logger.warn({ ...fields, error: end.text }, 'turn failed');
     } else {
       logger.info(fields, 'turn ended');
     }
     if (end.state === TaskState.TASK_STATE_COMPLETED) {
-      eventBus.publish(AgentEvent.artifactUpdate(forecastArtifact(ids, end.text)));
-      eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, end.state)));
+      eventBus.publish(AgentEvent.artifactUpdate(forecastArtifact(taskRef, end.text)));
+      eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, end.state)));
       return;
     }
-    eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, end.state, end.text)));
+    eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, end.state, end.text)));
   }
 }

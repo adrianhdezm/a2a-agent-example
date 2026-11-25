@@ -1,13 +1,13 @@
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { Part, StreamResponse } from '@a2a-js/sdk';
 
-export const ids = { taskId: 'task-1', contextId: 'context-1' };
+export const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 
 export function text(value: string): Part {
   return { content: { $case: 'text', value }, metadata: undefined, filename: '', mediaType: 'text/plain' };
 }
 
-export function taskEvent(id = ids.taskId, contextId = ids.contextId): StreamResponse {
+export function taskEvent(id = taskRef.taskId, contextId = taskRef.contextId): StreamResponse {
   return {
     payload: {
       $case: 'task',
@@ -23,13 +23,13 @@ export function taskEvent(id = ids.taskId, contextId = ids.contextId): StreamRes
   };
 }
 
-export function statusEvent(state: TaskState, message?: string, taskId = ids.taskId): StreamResponse {
+export function statusEvent(state: TaskState, message?: string, taskId = taskRef.taskId): StreamResponse {
   return {
     payload: {
       $case: 'statusUpdate',
       value: {
         taskId,
-        contextId: ids.contextId,
+        contextId: taskRef.contextId,
         status: {
           state,
           message:
@@ -37,7 +37,7 @@ export function statusEvent(state: TaskState, message?: string, taskId = ids.tas
               ? undefined
               : {
                   messageId: 'm-1',
-                  ...ids,
+                  ...taskRef,
                   role: Role.ROLE_AGENT,
                   parts: [text(message)],
                   metadata: undefined,
@@ -57,7 +57,7 @@ export function artifactEvent(parts: Part[]): StreamResponse {
     payload: {
       $case: 'artifactUpdate',
       value: {
-        ...ids,
+        ...taskRef,
         artifact: { artifactId: 'a-1', name: 'forecast', description: '', parts, metadata: undefined, extensions: [] },
         append: false,
         lastChunk: true,

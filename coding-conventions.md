@@ -76,7 +76,7 @@ From the root: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check
 
 Rules `tooling/eslint-config` adds to the shared ones below, for every package:
 
-- **No `await` as a call argument** (`no-restricted-syntax`, an error): `publishEnd(ids, await runOneTurn(…), bus)` hides a step that can take long and fail, so the awaited value gets a name first: `const end = await runOneTurn(…)`, then `publishEnd(ids, end, bus)`.
+- **No `await` as a call argument** (`no-restricted-syntax`, an error): `publishEnd(taskRef, await runOneTurn(…), bus)` hides a step that can take long and fail, so the awaited value gets a name first: `const end = await runOneTurn(…)`, then `publishEnd(taskRef, end, bus)`.
 - **No call that takes arguments as a `for … of` iterable** (`no-restricted-syntax`, an error): `for await (const event of runTurn({ prompt, sessionId: sessions.get(id), abortController }))` hides the lookup and the work the loop starts in its head, so each step gets a name first: `const sessionId = sessions.get(id)`, `const turn = runTurn({ prompt, sessionId, abortController })`, then `for await (const event of turn)`. A call with no arguments (`map.values()`) only views what is already named, so it is fine.
 
 Tests are exempt from both, since `expect(await response.json())` is the test runner's own idiom. Both are entries of `restrictedSyntax` in `tooling/eslint-config`. A package that sets its own `no-restricted-syntax` replaces them, so it spreads `restrictedSyntax` into its list.

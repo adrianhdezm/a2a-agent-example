@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { Message, Part, Task, TaskArtifactUpdateEvent, TaskStatusUpdateEvent } from '@a2a-js/sdk';
 
-/** The task and context every event of one execution belongs to. */
-export interface TaskIds {
+/** Which task, in which conversation (context): what every A2A event of one execution points to. */
+export interface TaskRef {
   taskId: string;
   contextId: string;
 }
@@ -18,10 +18,10 @@ export function partsText(parts: readonly Part[] | undefined): string {
   return (parts ?? []).flatMap(({ content }) => (content?.$case === 'text' ? [content.value] : [])).join('\n');
 }
 
-export function agentMessage(ids: TaskIds, text: string): Message {
+export function agentMessage(taskRef: TaskRef, text: string): Message {
   return {
     messageId: randomUUID(),
-    ...ids,
+    ...taskRef,
     role: Role.ROLE_AGENT,
     parts: [textPart(text)],
     metadata: undefined,
@@ -31,10 +31,10 @@ export function agentMessage(ids: TaskIds, text: string): Message {
 }
 
 /** A new task in `TASK_STATE_SUBMITTED`, holding the user's message. */
-export function submittedTask(ids: TaskIds, userMessage: Message): Task {
+export function submittedTask(taskRef: TaskRef, userMessage: Message): Task {
   return {
-    id: ids.taskId,
-    contextId: ids.contextId,
+    id: taskRef.taskId,
+    contextId: taskRef.contextId,
     status: { state: TaskState.TASK_STATE_SUBMITTED, message: undefined, timestamp: new Date().toISOString() },
     artifacts: [],
     history: [userMessage],
@@ -43,18 +43,18 @@ export function submittedTask(ids: TaskIds, userMessage: Message): Task {
 }
 
 /** A status update to `state`, carrying `text` as an agent message when given. */
-export function statusUpdate(ids: TaskIds, state: TaskState, text?: string): TaskStatusUpdateEvent {
+export function statusUpdate(taskRef: TaskRef, state: TaskState, text?: string): TaskStatusUpdateEvent {
   return {
-    ...ids,
-    status: { state, message: text === undefined ? undefined : agentMessage(ids, text), timestamp: new Date().toISOString() },
+    ...taskRef,
+    status: { state, message: text === undefined ? undefined : agentMessage(taskRef, text), timestamp: new Date().toISOString() },
     metadata: undefined
   };
 }
 
 /** The agent's answer as one complete text artifact named `forecast`. */
-export function forecastArtifact(ids: TaskIds, text: string): TaskArtifactUpdateEvent {
+export function forecastArtifact(taskRef: TaskRef, text: string): TaskArtifactUpdateEvent {
   return {
-    ...ids,
+    ...taskRef,
     artifact: {
       artifactId: randomUUID(),
       name: 'forecast',

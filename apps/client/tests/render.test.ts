@@ -1,7 +1,7 @@
 import { TaskState } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
 import { renderEvent } from '../src/render.ts';
-import { artifactEvent, ids, messageEvent, statusEvent, tagStyle, taskEvent, text } from './utils/a2a-seed.ts';
+import { artifactEvent, taskRef, messageEvent, statusEvent, tagStyle, taskEvent, text } from './utils/a2a-seed.ts';
 
 const compact = { style: tagStyle, verbose: false, now: () => new Date(2026, 10, 25, 9, 30, 5) };
 const verbose = { ...compact, verbose: true };
@@ -28,7 +28,7 @@ describe('renderEvent', () => {
       ['a cancellation', statusEvent(TaskState.TASK_STATE_CANCELED, 'Cancelled.'), '<yellow>  ⊘ cancelled'],
       ['a rejection with its reason', statusEvent(TaskState.TASK_STATE_REJECTED, 'Out of scope.'), '<red>  ✗ rejected: Out of scope.'],
       ["the answer from the agent's artifact", artifactEvent([text('Take an umbrella.')]), '<cyan>Agent: Take an umbrella.'],
-      ['a plain message reply', messageEvent('Hello!', ids), '<cyan>Agent: Hello!']
+      ['a plain message reply', messageEvent('Hello!', taskRef), '<cyan>Agent: Hello!']
     ])('shows %s', (_case, event, lines) => {
       expect(renderEvent(event, compact)).toBe(lines);
     });

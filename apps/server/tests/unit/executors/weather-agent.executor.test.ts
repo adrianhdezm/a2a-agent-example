@@ -7,7 +7,7 @@ import { SessionStore } from '../../../src/stores/session.store.ts';
 import { fakeEventBus } from '../../utils/fake-event-bus.ts';
 import { requestContext } from '../../utils/request-context-seed.ts';
 
-const ids = { taskId: 'task-1', contextId: 'context-1' };
+const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 
 /** A turn runner that answers every turn with `events`, and records what it was asked. */
 function fakeTurns(events: TurnEvent[]) {
@@ -57,7 +57,7 @@ describe('WeatherAgentExecutor', () => {
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', ids), bus);
+    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     // Assert
     expect(timeline(events)).toEqual([
@@ -76,7 +76,7 @@ describe('WeatherAgentExecutor', () => {
     const { runTurn } = fakeTurns([{ type: 'result', ok: true, text: 'Springfield, Illinois or Missouri?\nAWAITING_USER_INPUT' }]);
     const { bus, events } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Springfield this weekend?', ids), bus);
+    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Springfield this weekend?', taskRef), bus);
 
     expect(timeline(events).at(-1)).toBe('status TASK_STATE_INPUT_REQUIRED');
     expect(textOf(events.at(-1))).toBe('Springfield, Illinois or Missouri?');
@@ -90,8 +90,8 @@ describe('WeatherAgentExecutor', () => {
     ]);
     const executor = new WeatherAgentExecutor(runTurn, new SessionStore());
 
-    await executor.execute(requestContext('Springfield this weekend?', ids), fakeEventBus().bus);
-    await executor.execute(requestContext('Illinois', ids), fakeEventBus().bus);
+    await executor.execute(requestContext('Springfield this weekend?', taskRef), fakeEventBus().bus);
+    await executor.execute(requestContext('Illinois', taskRef), fakeEventBus().bus);
     await executor.execute(requestContext('Paris today?', { taskId: 'task-2', contextId: 'context-2' }), fakeEventBus().bus);
 
     expect(requests.map(({ prompt, sessionId }) => [prompt, sessionId])).toEqual([
@@ -108,7 +108,7 @@ describe('WeatherAgentExecutor', () => {
     const { runTurn } = fakeTurns(turn);
     const { bus, events, finishedCalls } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', ids), bus);
+    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     expect(timeline(events).at(-1)).toBe('status TASK_STATE_FAILED');
     expect(textOf(events.at(-1))).toBe(message);
@@ -122,7 +122,7 @@ describe('WeatherAgentExecutor', () => {
     }
     const { bus, events } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', ids), bus);
+    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     expect(textOf(events.at(-1))).toBe('Agent error: spawn claude ENOENT');
   });
@@ -146,7 +146,7 @@ describe('WeatherAgentExecutor', () => {
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act
-    const execution = executor.execute(requestContext('Lisbon tomorrow?', ids), bus);
+    const execution = executor.execute(requestContext('Lisbon tomorrow?', taskRef), bus);
     await running;
     await executor.cancelTask('task-1');
     await execution;
