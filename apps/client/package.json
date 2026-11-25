@@ -1,7 +1,7 @@
 {
   "name": "@a2a-agent-example/client",
   "version": "0.0.0",
-  "description": "An interactive A2A command line for the weather agent.",
+  "description": "An interactive A2A terminal client, for the weather agent or any other A2A agent.",
   "private": true,
   "type": "module",
   "scripts": {

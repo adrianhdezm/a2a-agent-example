@@ -1,4 +1,4 @@
-import { TaskState } from '@a2a-js/sdk';
+import { Role, TaskState } from '@a2a-js/sdk';
 import type { StreamResponse } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
 import { Conversation } from '../src/conversation.ts';
@@ -55,5 +55,28 @@ describe('Conversation', () => {
     conversation.reset();
 
     expect(conversation.request('Paris today?').message).toMatchObject({ contextId: '', taskId: '' });
+  });
+
+  it('follows the ids of a plain message reply, keeping its own where the message has none', () => {
+    const conversation = new Conversation();
+    conversation.observe(task('task-1', 'context-1'));
+
+    conversation.observe({
+      payload: {
+        $case: 'message',
+        value: {
+          messageId: 'm-1',
+          contextId: '',
+          taskId: 'task-2',
+          role: Role.ROLE_AGENT,
+          parts: [],
+          metadata: undefined,
+          extensions: [],
+          referenceTaskIds: []
+        }
+      }
+    });
+
+    expect(conversation.request('Thanks').message).toMatchObject({ contextId: 'context-1', taskId: 'task-2' });
   });
 });

@@ -36,15 +36,29 @@ In a second terminal, start the command line:
 pnpm cli
 ```
 
-`pnpm cli` connects to the agent on the `PORT` in `.env`; pass another agent's URL to talk to it instead (`pnpm cli http://localhost:41241`).
+`pnpm cli` is a general A2A terminal client: it connects to the agent on the `PORT` in `.env`, or to any A2A agent whose URL you pass (`pnpm cli http://localhost:41241`). `pnpm cli --help` lists its flags:
+
+| Flag                 | Does                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `--verbose`          | Heads every event with its time, state, task and context, and says when a task is final |
+| `--card-path <path>` | Reads the Agent Card from another path than `.well-known/agent-card.json`               |
+
+In the session, `/help` lists the commands, `/new` starts a new conversation, `/exit` quits, and Ctrl+C cancels the answer in progress. Answers show every kind of A2A part: text as it is, links and raw bytes described, data as JSON.
 
 A session looks like this:
 
 ```text
-Weather Agent: Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.
-Type a question. /new starts a new conversation, /exit quits, Ctrl+C cancels a running answer.
+Weather Agent v0.1.0
+Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.
+  Endpoint:  JSON-RPC at http://localhost:41241/a2a/jsonrpc (A2A 1.0)
+  Streaming: yes
+  Skills:
+    Weather forecast: The current weather and a daily forecast for a city: conditions, temperatures, rain and wind, with practical advice.
+      e.g. Do I need an umbrella in Lisbon tomorrow?
 
-You: Will it rain in Springfield tomorrow?
+Type a question, or /help for the commands.
+
+Weather Agent > You: Will it rain in Springfield tomorrow?
   … Looking into it…
   … Calling find_city {"name":"Springfield"}
 Agent: I found several places called Springfield. Which one do you mean?
@@ -52,7 +66,7 @@ Agent: I found several places called Springfield. Which one do you mean?
 - Springfield, Illinois
 - Springfield, Massachusetts
   (answer to continue, or /new to start over)
-You: Illinois
+Weather Agent > You: Illinois
   … Looking into it…
   … Calling get_forecast {"latitude":39.80172,"longitude":-89.64371,"days":2}
 Agent: It probably won't rain in Springfield, Illinois tomorrow, but heavy snow is very likely.
@@ -86,7 +100,14 @@ apps/server/src          the agent, an Express app
   prompts/               weather.prompt.ts: instructions and the end-of-turn marker
   executors/             weather-agent.executor.ts: the A2A AgentExecutor
   stores/                session.store.ts: the Claude session of each A2A context
-apps/client/src          the command line: main.ts, conversation.ts, render.ts
+apps/client/src          the A2A terminal client
+  main.ts                entry point: flags, connection, the read loop
+  args.ts                flags and usage
+  card.ts                the Agent Card summary
+  render.ts, parts.ts    events and parts as lines, compact or verbose
+  conversation.ts        the task and context ids between messages
+  commands.ts            /new, /help, /exit
+  style.ts               terminal colours, or none
 tooling/                 the shared tsconfig and ESLint config
 ```
 
