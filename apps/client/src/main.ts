@@ -60,7 +60,9 @@ rl.on('SIGINT', () => {
 async function ask(text: string): Promise<void> {
   answering = true;
   try {
-    for await (const response of client.sendMessageStream(conversation.request(text))) {
+    const request = conversation.request(text);
+    const stream = client.sendMessageStream(request);
+    for await (const response of stream) {
       conversation.observe(response);
       const lines = renderEvent(response, renderOptions);
       if (lines !== undefined) {

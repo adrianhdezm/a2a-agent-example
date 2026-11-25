@@ -56,7 +56,9 @@ export class WeatherAgentExecutor implements AgentExecutor {
   }
 
   async #runOneTurn(ids: TaskIds, prompt: string, abortController: AbortController, eventBus: ExecutionEventBus): Promise<TurnEnd> {
-    for await (const event of this.#runTurn({ prompt, sessionId: this.#sessions.get(ids.contextId), abortController })) {
+    const sessionId = this.#sessions.get(ids.contextId);
+    const turn = this.#runTurn({ prompt, sessionId, abortController });
+    for await (const event of turn) {
       switch (event.type) {
         case 'session':
           this.#sessions.set(ids.contextId, event.sessionId);

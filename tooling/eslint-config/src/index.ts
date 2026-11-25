@@ -8,6 +8,24 @@ export interface ConfigOptions {
   tsconfigRootDir: string;
 }
 
+/**
+ * The `no-restricted-syntax` entries every package gets: steps hidden inside an expression are hard to read and to
+ * debug, so each gets a name first. A package that sets its own `no-restricted-syntax` replaces them, so it spreads
+ * these into its own list.
+ */
+export const restrictedSyntax = [
+  {
+    // An awaited result passed straight into a call hides a step that can take long and fail.
+    selector: 'CallExpression > AwaitExpression.arguments, NewExpression > AwaitExpression.arguments',
+    message: 'Await into a named const first, then pass the const.'
+  },
+  {
+    // A loop head that builds its iterable hides the work the loop starts; a call with no arguments (map.values()) is fine.
+    selector: 'ForOfStatement > CallExpression.right[arguments.length>0]',
+    message: 'Name what the loop iterates in a const first, then loop over the const.'
+  }
+];
+
 /** The house ESLint config for one package: typed rules through its own tsconfig projects, and the shared rules. */
 export function config({ tsconfigRootDir }: ConfigOptions) {
   return defineConfig(
@@ -57,15 +75,7 @@ export function config({ tsconfigRootDir }: ConfigOptions) {
         'no-else-return': 'warn',
         'no-nested-ternary': 'warn',
         'no-unneeded-ternary': 'warn',
-        // An awaited result passed straight into a call hides a step that can take long and fail: name it first.
-        // A package that sets its own no-restricted-syntax replaces this one, so it repeats the selector.
-        'no-restricted-syntax': [
-          'error',
-          {
-            selector: 'CallExpression > AwaitExpression.arguments, NewExpression > AwaitExpression.arguments',
-            message: 'Await into a named const first, then pass the const.'
-          }
-        ]
+        'no-restricted-syntax': ['error', ...restrictedSyntax]
       }
     },
     {

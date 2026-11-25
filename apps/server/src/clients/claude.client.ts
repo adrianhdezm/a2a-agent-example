@@ -68,7 +68,9 @@ export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest
 
 /** Runs one Claude turn and yields what it reports; aborting the request's controller stops it. */
 export async function* runClaudeTurn(settings: ClaudeTurnSettings, request: TurnRequest): AsyncIterable<TurnEvent> {
-  for await (const message of settings.query({ prompt: request.prompt, options: claudeOptions(settings, request) })) {
+  const options = claudeOptions(settings, request);
+  const messages = settings.query({ prompt: request.prompt, options });
+  for await (const message of messages) {
     yield* translateClaudeMessage(message);
   }
 }
