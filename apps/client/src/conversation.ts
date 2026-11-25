@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Role, TaskState } from '@a2a-js/sdk';
-import type { SendMessageRequest, StreamResponse, TaskStatusUpdateEvent } from '@a2a-js/sdk';
+import type { SendMessageRequest, StreamResponse } from '@a2a-js/sdk';
 
 // States after which a task takes no more messages; the next message starts a new task in the same context.
 const finalStates = new Set<TaskState>([
@@ -53,19 +53,18 @@ export class Conversation {
       case 'task':
         this.#follow(payload.value.contextId, payload.value.id);
         break;
-      case 'statusUpdate':
-        this.#followStatus(payload.value);
+      case 'statusUpdate': {
+        // A final state ends the task: the next message starts a new one in the same context.
+        const { contextId, taskId, status } = payload.value;
+        const final = status?.state !== undefined && finalStates.has(status.state);
+        this.#follow(contextId, final ? undefined : taskId);
         break;
+      }
       case 'message':
         // An agent may answer with a plain message, which carries the ids it chose when it has any.
         this.#follow(payload.value.contextId || this.#contextId, payload.value.taskId || this.#taskId);
         break;
     }
-  }
-
-  #followStatus({ contextId, taskId, status }: TaskStatusUpdateEvent): void {
-    const state = status?.state;
-    this.#follow(contextId, state !== undefined && finalStates.has(state) ? undefined : taskId);
   }
 
   #follow(contextId: string | undefined, taskId: string | undefined): void {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OpenMeteoError } from '../models/weather.model.ts';
-import type { DailyWeather, Forecast, Place, WeatherService } from '../models/weather.model.ts';
+import type { DailyWeather, Place, WeatherService } from '../models/weather.model.ts';
 
 export type Fetch = (url: string) => Promise<Response>;
 
@@ -63,51 +63,14 @@ async function get<T>(what: string, fetchUrl: Fetch, url: string, schema: z.ZodT
   return parsed.data;
 }
 
-// Open-Meteo answers one array per variable, aligned by day; a day missing any required value is left out.
-function toDays(daily: z.infer<typeof forecastSchema>['daily']): DailyWeather[] {
-  return daily.time.flatMap((date, i) => {
-    const weatherCode = daily.weather_code[i];
-    const maxC = daily.temperature_2m_max[i];
-    const minC = daily.temperature_2m_min[i];
-    const precipitationMm = daily.precipitation_sum[i];
-    const maxWindKmh = daily.wind_speed_10m_max[i];
-    if (
-      weatherCode === undefined ||
-      maxC === undefined ||
-      minC === undefined ||
-      precipitationMm === undefined ||
-      maxWindKmh === undefined
-    ) {
-      return [];
-    }
-    const precipitationChancePercent = daily.precipitation_probability_max[i] ?? undefined;
-    return [{ date, weatherCode, maxC, minC, precipitationChancePercent, precipitationMm, maxWindKmh }];
-  });
-}
-
-function toForecast(body: z.infer<typeof forecastSchema>): Forecast {
-  const c = body.current;
-  return {
-    timezone: body.timezone,
-    current: {
-      time: c.time,
-      temperatureC: c.temperature_2m,
-      feelsLikeC: c.apparent_temperature,
-      humidityPercent: c.relative_humidity_2m,
-      weatherCode: c.weather_code,
-      windKmh: c.wind_speed_10m
-    },
-    days: toDays(body.daily)
-  };
-}
-
 /** The Open-Meteo geocoding and forecast APIs, which need no key; `fetchUrl` is the global `fetch` unless a test hands in its own. */
 export function openMeteoClient(fetchUrl: Fetch = fetch): WeatherService {
   return {
     findPlaces: async (name) => {
       const query = new URLSearchParams({ name, count: '5', language: 'en', format: 'json' });
       const url = `https://geocoding-api.open-meteo.com/v1/search?${query.toString()}`;
-      return (await get('Open-Meteo geocoding', fetchUrl, url, searchSchema)).results ?? [];
+      const { results } = await get('Open-Meteo geocoding', fetchUrl, url, searchSchema);
+      return results ?? [];
     },
     forecast: async (latitude, longitude, days) => {
       const query = new URLSearchParams({
@@ -119,8 +82,38 @@ export function openMeteoClient(fetchUrl: Fetch = fetch): WeatherService {
         forecast_days: String(days)
       });
       const url = `https://api.open-meteo.com/v1/forecast?${query.toString()}`;
-      const body = await get('Open-Meteo forecast', fetchUrl, url, forecastSchema);
-      return toForecast(body);
+      const { timezone, current, daily } = await get('Open-Meteo forecast', fetchUrl, url, forecastSchema);
+      // Open-Meteo answers one array per variable, aligned by day; a day missing any required value is left out.
+      const forecastDays = daily.time.flatMap((date, i): DailyWeather[] => {
+        const weatherCode = daily.weather_code[i];
+        const maxC = daily.temperature_2m_max[i];
+        const minC = daily.temperature_2m_min[i];
+        const precipitationMm = daily.precipitation_sum[i];
+        const maxWindKmh = daily.wind_speed_10m_max[i];
+        if (
+          weatherCode === undefined ||
+          maxC === undefined ||
+          minC === undefined ||
+          precipitationMm === undefined ||
+          maxWindKmh === undefined
+        ) {
+          return [];
+        }
+        const precipitationChancePercent = daily.precipitation_probability_max[i] ?? undefined;
+        return [{ date, weatherCode, maxC, minC, precipitationChancePercent, precipitationMm, maxWindKmh }];
+      });
+      return {
+        timezone,
+        current: {
+          time: current.time,
+          temperatureC: current.temperature_2m,
+          feelsLikeC: current.apparent_temperature,
+          humidityPercent: current.relative_humidity_2m,
+          weatherCode: current.weather_code,
+          windKmh: current.wind_speed_10m
+        },
+        days: forecastDays
+      };
     }
   };
 }

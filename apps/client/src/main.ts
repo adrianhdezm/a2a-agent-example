@@ -1,6 +1,7 @@
 import { createInterface } from 'node:readline/promises';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import { parseCliArgs, usage } from './args.ts';
+import type { CliOptions } from './args.ts';
 import { renderCard } from './card.ts';
 import { runCommand } from './commands.ts';
 import { Conversation } from './conversation.ts';
@@ -8,34 +9,28 @@ import { UsageError } from './errors/usage-error.ts';
 import { renderEvent } from './render.ts';
 import { terminalStyle as style } from './style.ts';
 
-function readOptions() {
-  try {
-    return parseCliArgs(process.argv.slice(2));
-  } catch (error) {
-    if (error instanceof UsageError) {
-      console.error(`${style('red', error.message)}\n\n${usage}`);
-      process.exit(2);
-    }
-    throw error;
+let options: CliOptions;
+try {
+  options = parseCliArgs(process.argv.slice(2));
+} catch (error) {
+  if (error instanceof UsageError) {
+    console.error(`${style('red', error.message)}\n\n${usage}`);
+    process.exit(2);
   }
+  throw error;
 }
-
-// Without a url, the agent this repository runs, on the PORT in .env, which must then be set: there is no fallback.
-function defaultUrl(): string {
-  const port = process.env.PORT;
-  if (port === undefined || port === '') {
-    throw new Error('PORT is not set: set it in .env (see .env.example), or pass the agent URL as the first argument');
-  }
-  return `http://localhost:${port}`;
-}
-
-const options = readOptions();
 if (options.help) {
   console.log(usage);
   process.exit(0);
 }
 
-const client = await new ClientFactory().createFromUrl(options.url ?? defaultUrl(), options.cardPath);
+// Without a url, the agent this repository runs, on the PORT in .env, which must then be set: there is no fallback.
+const port = process.env.PORT;
+if (options.url === undefined && (port === undefined || port === '')) {
+  throw new Error('PORT is not set: set it in .env (see .env.example), or pass the agent URL as the first argument');
+}
+const url = options.url ?? `http://localhost:${String(port)}`;
+const client = await new ClientFactory().createFromUrl(url, options.cardPath);
 const card = await client.getAgentCard();
 console.log(`${renderCard(card, style)}\n`);
 console.log(style('dim', 'Type a question, or /help for the commands.\n'));

@@ -16,11 +16,6 @@ export interface ClaudeTurnSettings {
   query: ClaudeQuery;
 }
 
-function describeToolCall(name: string, input: unknown): string {
-  const tool = name.replace(/^mcp__[^_]+__/, '');
-  return `Calling ${tool} ${JSON.stringify(input)}`;
-}
-
 /**
  * The turn events one SDK message stands for. An assistant message that calls tools reports its text and its calls
  * as progress; one that does not is the answer, which the `result` message carries, so it reports nothing.
@@ -38,7 +33,11 @@ export function translateClaudeMessage(message: SDKMessage): TurnEvent[] {
       if (block.type === 'text' && block.text.trim() !== '') {
         return [{ type: 'progress', text: block.text.trim() }];
       }
-      return block.type === 'tool_use' ? [{ type: 'progress', text: describeToolCall(block.name, block.input) }] : [];
+      if (block.type !== 'tool_use') {
+        return [];
+      }
+      const tool = block.name.replace(/^mcp__[^_]+__/, '');
+      return [{ type: 'progress', text: `Calling ${tool} ${JSON.stringify(block.input)}` }];
     });
   }
   if (message.type === 'result') {

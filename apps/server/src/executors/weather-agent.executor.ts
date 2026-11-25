@@ -64,8 +64,15 @@ export class WeatherAgentExecutor implements AgentExecutor {
         case 'progress':
           eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, TaskState.TASK_STATE_WORKING, event.text)));
           break;
-        case 'result':
-          return event.ok ? toTurnEnd(event.text) : { state: TaskState.TASK_STATE_FAILED, text: `Agent error: ${event.error}` };
+        case 'result': {
+          if (!event.ok) {
+            return { state: TaskState.TASK_STATE_FAILED, text: `Agent error: ${event.error}` };
+          }
+          const answer = readTurnEnd(event.text);
+          return answer.outcome === 'completed'
+            ? { state: TaskState.TASK_STATE_COMPLETED, text: answer.text || 'Done.' }
+            : { state: TaskState.TASK_STATE_INPUT_REQUIRED, text: answer.text };
+        }
       }
     }
     if (abortController.signal.aborted) {
@@ -89,11 +96,4 @@ export class WeatherAgentExecutor implements AgentExecutor {
     }
     eventBus.publish(AgentEvent.statusUpdate(statusUpdate(ids, end.state, end.text)));
   }
-}
-
-function toTurnEnd(answer: string): TurnEnd {
-  const { outcome, text } = readTurnEnd(answer);
-  return outcome === 'completed'
-    ? { state: TaskState.TASK_STATE_COMPLETED, text: text || 'Done.' }
-    : { state: TaskState.TASK_STATE_INPUT_REQUIRED, text };
 }

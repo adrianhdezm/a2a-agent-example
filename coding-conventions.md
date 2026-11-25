@@ -78,6 +78,11 @@ Rules `tooling/eslint-config` adds to the shared ones below, for every package:
 
 - **No `await` as a call argument** (`no-restricted-syntax`, an error): `publishEnd(ids, await runOneTurn(…), bus)` hides a step that can take long and fail, so the awaited value gets a name first: `const end = await runOneTurn(…)`, then `publishEnd(ids, end, bus)`. Tests are exempt, since `expect(await response.json())` is the test runner's own idiom. A package that sets its own `no-restricted-syntax` replaces this one, so it repeats the selector.
 
+### Functions
+
+- **Extract a function only when it is used more than once.** A step used once stays where it runs, and a `const` with a meaningful name carries what a function name would (`const answer = readTurnEnd(event.text)`); a `switch` case that needs statements gets braces. Exported functions are a module's API and are exempt.
+- **When a size limit fires, split by meaning**, and prefer a piece that is then used more than once (`renderAnswer` serves both artifacts and messages). A private function used once exists only because a limit fired without it: `#runOneTurn` (the executor's complexity), `compactStatus` and `renderStatus` (`renderEvent`'s complexity), and the client's `ask` (the read loop's nesting).
+
 ### Exceptions
 
 - **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.
