@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../../../src/clients/claude.client.ts';
 import type { ClaudeTurnSettings } from '../../../src/clients/claude.client.ts';
 import type { TurnEvent } from '../../../src/models/turn.model.ts';
-import { answer, init, maxTurns, sessionId, success, toolCall } from '../../fixtures/claude-messages.ts';
+import { answer, init, maxTurns, question, sessionId, success, toolCall, unreadable } from '../../fixtures/claude-messages.ts';
 
 function settings(messages: SDKMessage[] = []) {
   const calls: { prompt: string; options: Options }[] = [];
@@ -43,12 +43,18 @@ describe('claude.client', () => {
       ]);
     });
 
-    it('reports nothing for the answer message, which the result carries', () => {
+    it('reports nothing for the StructuredOutput call that delivers the answer, which the result carries', () => {
       expect(translateClaudeMessage(answer)).toEqual([]);
     });
 
     it.each([
-      ['a success', success, { type: 'result', ok: true, text: 'Take an umbrella tomorrow: 85% chance of rain.\nCOMPLETED' }],
+      ['an answer', success, { type: 'result', ok: true, outcome: 'completed', text: 'Take an umbrella tomorrow: 85% chance of rain.' }],
+      [
+        'a question',
+        question,
+        { type: 'result', ok: true, outcome: 'input-required', text: 'Springfield, Illinois or Springfield, Missouri?' }
+      ],
+      ['an answer in another shape', unreadable, { type: 'result', ok: false, error: 'the answer did not match its output format' }],
       ['any other result', maxTurns, { type: 'result', ok: false, error: 'error_max_turns' }]
     ])('ends the turn on %s', (_case, message, event) => {
       expect(translateClaudeMessage(message)).toEqual([event]);
@@ -70,6 +76,20 @@ describe('claude.client', () => {
         settingSources: [],
         maxTurns: 8,
         env: { ANTHROPIC_API_KEY: 'test-key' }
+      });
+    });
+
+    it('asks for the answer as an outcome and a text, both required, in the JSON Schema draft the CLI reads', () => {
+      const { outputFormat } = claudeOptions(settings().value, { prompt: 'Lisbon tomorrow?', abortController: new AbortController() });
+
+      expect(outputFormat).toMatchObject({
+        type: 'json_schema',
+        schema: {
+          $schema: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          properties: { outcome: { enum: ['completed', 'input-required'] }, text: { type: 'string' } },
+          required: ['outcome', 'text']
+        }
       });
     });
   });

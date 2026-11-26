@@ -81,7 +81,7 @@ Wear a warm coat, gloves and waterproof boots.
 1. The CLI sends the line with `sendMessageStream`, in the conversation's `contextId`, and in its `taskId` when the agent is waiting for an answer.
 2. `TurnAgentExecutor` publishes the task (`SUBMITTED`, then `WORKING`) and runs one Claude Agent SDK `query()`, resuming the Claude session the `SessionStore` holds for that `contextId`.
 3. Claude calls `find_city` and `get_forecast`, two in-process MCP tools backed by the Open-Meteo client. It has no other tools, built-in ones included, and loads none of the machine's Claude settings. Each tool call is streamed as a `WORKING` update.
-4. As in the movie-agent sample, the answer's last line says how the turn ended. `COMPLETED` publishes the answer as a `forecast` artifact and ends the task. `AWAITING_USER_INPUT` ends it `INPUT_REQUIRED`, with the agent's question on the status.
+4. Claude ends every turn with a structured answer, `{ outcome, text }`, which the Claude Agent SDK enforces with a JSON schema. Where the movie-agent sample reads a marker off the answer's last line, the outcome here is a field. `completed` publishes the answer as a `forecast` artifact and ends the task. `input-required` ends it `INPUT_REQUIRED`, with the agent's question on the status.
 
 ## Layout
 
@@ -97,7 +97,7 @@ apps/server/src          the agent, an Express app
   helpers/               Agent Card, A2A messages, weather codes and formatting
   clients/               open-meteo.client.ts, claude.client.ts
   tools/                 weather.tool.ts: find_city and get_forecast for Claude
-  prompts/               weather.prompt.ts: the instructions; turn-end.prompt.ts: the end-of-turn marker
+  prompts/               weather.prompt.ts: the instructions
   executors/             turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
   stores/                session.store.ts: the Claude session of each A2A context
 apps/client/src          the A2A terminal client

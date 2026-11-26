@@ -63,7 +63,7 @@ export function config({ tsconfigRootDir }: ConfigOptions) {
         '@typescript-eslint/no-non-null-assertion': 'error',
 
         // Complexity and size guardrails
-        complexity: ['warn', 12],
+        complexity: ['warn', 10],
         'max-depth': ['warn', 4],
         'max-lines-per-function': ['warn', 75],
         'max-statements': ['warn', 20],

@@ -58,7 +58,7 @@ describe('TurnAgentExecutor', () => {
     const { runTurn } = fakeTurns([
       { type: 'session', sessionId: 'session-1' },
       { type: 'progress', text: 'Calling find_city {"name":"Lisbon"}' },
-      { type: 'result', ok: true, text: 'Take an umbrella tomorrow.\nCOMPLETED' }
+      { type: 'result', ok: true, outcome: 'completed', text: 'Take an umbrella tomorrow.' }
     ]);
     const { bus, events, finishedCalls } = fakeEventBus();
 
@@ -79,7 +79,7 @@ describe('TurnAgentExecutor', () => {
   });
 
   it("asks the user back with input-required, carrying the agent's question on the status", async () => {
-    const { runTurn } = fakeTurns([{ type: 'result', ok: true, text: 'Springfield, Illinois or Missouri?\nAWAITING_USER_INPUT' }]);
+    const { runTurn } = fakeTurns([{ type: 'result', ok: true, outcome: 'input-required', text: 'Springfield, Illinois or Missouri?' }]);
     const { bus, events } = fakeEventBus();
 
     await executorFor(runTurn).execute(requestContext('Springfield this weekend?', taskRef), bus);
@@ -89,28 +89,19 @@ describe('TurnAgentExecutor', () => {
     expect(timeline(events)).not.toContain('artifact forecast');
   });
 
-  it.each([
-    [
-      'a marker in any case, with spaces around it',
-      'Which Springfield?\n  awaiting_user_input  \n',
-      'status TASK_STATE_INPUT_REQUIRED',
-      'Which Springfield?'
-    ],
-    ['an answer without a marker as completed', 'Sunny all week.', 'artifact forecast', 'Sunny all week.']
-  ])('reads %s', async (_case, answer, carriedBy, text) => {
-    const { runTurn } = fakeTurns([{ type: 'result', ok: true, text: answer }]);
+  it('completes an empty answer with a short text, so the artifact is never blank', async () => {
+    const { runTurn } = fakeTurns([{ type: 'result', ok: true, outcome: 'completed', text: '' }]);
     const { bus, events } = fakeEventBus();
 
     await executorFor(runTurn).execute(requestContext('Weather?', taskRef), bus);
 
-    const carrier = events.find((event) => timeline([event])[0] === carriedBy);
-    expect(textOf(carrier)).toBe(text);
+    expect(textOf(events.find((event) => event.kind === 'artifactUpdate'))).toBe('Done.');
   });
 
   it('resumes the Claude session of the context for the next message', async () => {
     const { requests, runTurn } = fakeTurns([
       { type: 'session', sessionId: 'session-1' },
-      { type: 'result', ok: true, text: 'Which Springfield?\nAWAITING_USER_INPUT' }
+      { type: 'result', ok: true, outcome: 'input-required', text: 'Which Springfield?' }
     ]);
     const executor = executorFor(runTurn);
 
@@ -164,7 +155,7 @@ describe('TurnAgentExecutor', () => {
           reject(new Error('Claude Code process aborted by user'));
         });
       });
-      yield { type: 'result', ok: true, text: 'never' };
+      yield { type: 'result', ok: true, outcome: 'completed', text: 'never' };
     }
     const executor = executorFor(runTurn);
     const { bus, events, finishedCalls } = fakeEventBus();

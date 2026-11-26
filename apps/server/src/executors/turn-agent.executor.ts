@@ -5,7 +5,6 @@ import { answerArtifact, partsText, statusUpdate, submittedTask } from '../helpe
 import type { AnswerArtifact, TaskRef } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../logger.ts';
 import type { RunTurn } from '../models/turn.model.ts';
-import { completedMarker, inputRequiredMarker } from '../prompts/turn-end.prompt.ts';
 import type { SessionStore } from '../stores/session.store.ts';
 
 /** How a turn ended, as the task's final state and the text that goes with it. */
@@ -24,8 +23,7 @@ export interface TurnAgentOptions {
 /**
  * Any agent that answers in turns, behind A2A. Each message runs one turn in the session of its `contextId`, so a
  * conversation keeps its history; the turn streams as `WORKING` updates and ends `COMPLETED` with the answer as an
- * artifact, `INPUT_REQUIRED` with the agent's question, `FAILED`, or `CANCELED`. The agent's prompt must end with
- * `turnEndInstructions`, whose marker says which.
+ * artifact, `INPUT_REQUIRED` with the agent's question, `FAILED`, or `CANCELED`, as the turn's outcome says.
  */
 export class TurnAgentExecutor implements AgentExecutor {
   readonly #runTurn: RunTurn;
@@ -76,20 +74,13 @@ export class TurnAgentExecutor implements AgentExecutor {
         case 'progress':
           eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, TaskState.TASK_STATE_WORKING, event.text)));
           break;
-        case 'result': {
+        case 'result':
           if (!event.ok) {
             return { state: TaskState.TASK_STATE_FAILED, text: `Agent error: ${event.error}` };
           }
-          // The answer's last line is the marker turnEndInstructions asks for. An answer without one counts as
-          // completed, so a model that forgets the marker still delivers its answer.
-          const lines = event.text.trimEnd().split('\n');
-          const marker = lines.at(-1)?.trim().toUpperCase();
-          const text =
-            marker === completedMarker || marker === inputRequiredMarker ? lines.slice(0, -1).join('\n').trim() : event.text.trim();
-          return marker === inputRequiredMarker
-            ? { state: TaskState.TASK_STATE_INPUT_REQUIRED, text }
-            : { state: TaskState.TASK_STATE_COMPLETED, text: text || 'Done.' };
-        }
+          return event.outcome === 'input-required'
+            ? { state: TaskState.TASK_STATE_INPUT_REQUIRED, text: event.text }
+            : { state: TaskState.TASK_STATE_COMPLETED, text: event.text || 'Done.' };
       }
     }
     if (abortController.signal.aborted) {

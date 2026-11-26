@@ -9,12 +9,12 @@ import type { TestApp } from '../utils/test-app.ts';
 const answer: TurnEvent[] = [
   { type: 'session', sessionId: 'session-1' },
   { type: 'progress', text: 'Calling get_forecast {"latitude":38.72,"longitude":-9.13,"days":2}' },
-  { type: 'result', ok: true, text: 'Take an umbrella tomorrow.\nCOMPLETED' }
+  { type: 'result', ok: true, outcome: 'completed', text: 'Take an umbrella tomorrow.' }
 ];
 
 const question: TurnEvent[] = [
   { type: 'session', sessionId: 'session-1' },
-  { type: 'result', ok: true, text: 'Which Springfield?\nAWAITING_USER_INPUT' }
+  { type: 'result', ok: true, outcome: 'input-required', text: 'Which Springfield?' }
 ];
 
 function message(text: string, taskRef: { contextId?: string; taskId?: string } = {}): SendMessageRequest {

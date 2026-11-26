@@ -18,24 +18,31 @@ export const toolCall = {
   }
 } as unknown as SDKMessage;
 
+// The answer, delivered through the SDK's StructuredOutput tool and then carried by the result message.
 export const answer = {
   type: 'assistant',
   session_id: sessionId,
-  message: { content: [{ type: 'text', text: 'Take an umbrella tomorrow.\nCOMPLETED' }] }
+  message: {
+    content: [
+      { type: 'tool_use', id: 'toolu_02', name: 'StructuredOutput', input: { outcome: 'completed', text: 'Take an umbrella tomorrow.' } }
+    ]
+  }
 } as unknown as SDKMessage;
 
-export const success = {
-  type: 'result',
-  subtype: 'success',
-  session_id: sessionId,
-  result: 'Take an umbrella tomorrow: 85% chance of rain.\nCOMPLETED'
-} as unknown as SDKMessage;
+function result(structuredOutput: unknown): SDKMessage {
+  return {
+    type: 'result',
+    subtype: 'success',
+    session_id: sessionId,
+    result: JSON.stringify(structuredOutput),
+    structured_output: structuredOutput
+  } as unknown as SDKMessage;
+}
 
-export const question = {
-  type: 'result',
-  subtype: 'success',
-  session_id: sessionId,
-  result: 'Springfield, Illinois or Springfield, Missouri?\nAWAITING_USER_INPUT'
-} as unknown as SDKMessage;
+export const success = result({ outcome: 'completed', text: 'Take an umbrella tomorrow: 85% chance of rain.' });
+
+export const question = result({ outcome: 'input-required', text: 'Springfield, Illinois or Springfield, Missouri?' });
+
+export const unreadable = result({ answer: 'Take an umbrella.' });
 
 export const maxTurns = { type: 'result', subtype: 'error_max_turns', session_id: sessionId, errors: [] } as unknown as SDKMessage;
