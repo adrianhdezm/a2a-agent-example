@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SessionStore } from '../../../src/stores/session.store.ts';
+import { SessionStore } from '../../../../../src/agents/core/stores/session.store.ts';
 
 describe('SessionStore', () => {
   it('returns the session saved for a context, and none for a context without one', () => {

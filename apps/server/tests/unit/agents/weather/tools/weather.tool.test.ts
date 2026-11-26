@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatForecast, formatPlaces } from '../../../src/helpers/weather-format.helper.ts';
-import { OpenMeteoError } from '../../../src/models/weather.model.ts';
-import type { Forecast, Place, WeatherService } from '../../../src/models/weather.model.ts';
-import { findCityTool, getForecastTool, weatherToolNames } from '../../../src/tools/weather.tool.ts';
+import { formatForecast, formatPlaces } from '../../../../../src/agents/weather/helpers/weather-format.helper.ts';
+import { OpenMeteoError } from '../../../../../src/agents/weather/models/weather.model.ts';
+import type { Forecast, Place, WeatherService } from '../../../../../src/agents/weather/models/weather.model.ts';
+import { findCityTool, getForecastTool, weatherToolNames } from '../../../../../src/agents/weather/tools/weather.tool.ts';
 
 const lisbon: Place = {
   name: 'Lisbon',

@@ -1,38 +1,29 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
+import { TurnAgentExecutor } from './agents/core/executors/turn-agent.executor.ts';
+import { agentPaths } from './agents/core/helpers/agent-card.helper.ts';
+import { runClaudeTurn } from './agents/core/runners/claude.runner.ts';
+import type { ClaudeTurnSettings } from './agents/core/runners/claude.runner.ts';
+import { SessionStore } from './agents/core/stores/session.store.ts';
+import { openMeteoClient } from './agents/weather/clients/open-meteo.client.ts';
+import { weatherAgent } from './agents/weather/weather.agent.ts';
 import { createApp } from './app.ts';
-import { runClaudeTurn } from './clients/claude.client.ts';
-import type { ClaudeTurnSettings } from './clients/claude.client.ts';
-import { openMeteoClient } from './clients/open-meteo.client.ts';
-import { TurnAgentExecutor } from './executors/turn-agent.executor.ts';
-import { agentPaths, weatherAgentCard } from './helpers/agent-card.helper.ts';
 import { readPort, requireVariable } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
-import { weatherInstructions } from './prompts/weather.prompt.ts';
-import { SessionStore } from './stores/session.store.ts';
-import { weatherMcpServer, weatherServerName, weatherToolNames } from './tools/weather.tool.ts';
-
-// Enough round trips for a city lookup, a forecast or two and the answer, with room to ask back.
-const maxTurns = 8;
 
 const port = readPort(process.env);
 const apiKey = requireVariable(process.env, 'ANTHROPIC_API_KEY');
 const baseUrl = `http://localhost:${String(port)}`;
 
-const claude: ClaudeTurnSettings = {
-  apiKey,
-  systemPrompt: () => weatherInstructions(new Date()),
-  mcpServers: { [weatherServerName]: weatherMcpServer(openMeteoClient()) },
-  allowedTools: weatherToolNames,
-  maxTurns,
-  query
-};
+// The agent, run on Claude and served over A2A: one executor, its sessions and its task store.
+const { card: cardAt, answerArtifact, ...agentTurns } = weatherAgent(openMeteoClient());
+const claude: ClaudeTurnSettings = { ...agentTurns, apiKey, query };
 const executor = new TurnAgentExecutor({
   runTurn: (request) => runClaudeTurn(claude, request),
   sessions: new SessionStore(),
-  answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+  answerArtifact
 });
-const card = weatherAgentCard(baseUrl);
+const card = cardAt(baseUrl);
 const requestHandler = new DefaultRequestHandler(card, new InMemoryTaskStore(), executor);
 
 const server = createApp({ requestHandler }).listen(port, (error) => {

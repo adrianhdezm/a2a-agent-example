@@ -41,31 +41,56 @@ The apps never import each other: they meet only over A2A. Each keeps its own co
 
 ### Server building blocks
 
-`apps/server/src/` holds four files at its root, as the Express doc places them: `server.ts` (the composition root), `app.ts` (the pure `createApp(context)` factory), `logger.ts` (the one Pino logger) and `express.d.ts` (`AppContext` on `Express.Locals`). Everything else is in a block. The first five are the Express doc's; the rest are this project's, for what an agent server has that a REST API does not.
+`apps/server/src/` has two parts: the Express app, which serves, and `agents/`, which holds what it serves.
 
-| Block      | Lives in                                       | Is                                                                                                                                                                                                                                                                   | Must not                                                                 |
-| ---------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| controller | `controllers/<resource>.controller.ts`         | one `async (req, res, next)` per route of the server's own: `getHealth`                                                                                                                                                                                              | reach a dependency except through `req.app.locals.context`               |
-| middleware | `middlewares/<name>.middleware.ts`             | `notFoundHandler` and `errorHandler`, which apply to every request                                                                                                                                                                                                   | answer a route of their own                                              |
-| context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext`: the A2A request handler the app mounts                                                                                                                                                                                                                 | —                                                                        |
-| model      | `models/<name>.model.ts`                       | types and error classes: `weather` (places, forecasts, `WeatherService`, `OpenMeteoError`), `turn` (turn events, `RunTurn`), `config` (`ConfigError`), `app-context`                                                                                                 | contain logic beyond an error's message                                  |
-| helper     | `helpers/<name>.helper.ts`                     | transport-free functions: configuration (`requireVariable`, `readPort`), the Agent Card, A2A messages and text parts, weather codes and formatting                                                                                                                   | take an Express `Request`                                                |
-| client     | `clients/<service>.client.ts`                  | one outbound integration each, reached with what it needs handed in: `open-meteo` (validates every answer with zod, throws `OpenMeteoError`), `claude` (one Claude Agent SDK `query()` as turn events, its answer a structured `{ outcome, text }` checked with zod) | know about A2A or Express                                                |
-| tool       | `tools/<name>.tool.ts`                         | the Claude tools and the in-process MCP server that offers them: `weather` (`find_city`, `get_forecast`)                                                                                                                                                             | call an API except through a client                                      |
-| prompt     | `prompts/<name>.prompt.ts`                     | a system prompt: `weather` (the instructions, dated per turn)                                                                                                                                                                                                        | call a model                                                             |
-| executor   | `executors/<name>.executor.ts`                 | an A2A SDK `AgentExecutor`: `turn-agent`, one agent turn per message, streamed, with `input-required` and cancellation; knows no agent                                                                                                                               | reach a client except through the `RunTurn` it is handed                 |
-| store      | `stores/<name>.store.ts`                       | state kept in memory, created by the composition root and handed to what uses it: `session` (the Claude session of each A2A context)                                                                                                                                 | be reached any other way than through what the composition root hands in |
+**The Express app.** Four files sit at the root of `src/`, as the Express doc places them: `server.ts` (the composition root), `app.ts` (the pure `createApp(context)` factory), `logger.ts` (the one Pino logger, shared with the agents) and `express.d.ts` (`AppContext` on `Express.Locals`). Everything else of the app is in the Express doc's blocks:
 
-Tests mirror the blocks: `tests/unit/<block>/<name>.<block>.test.ts` (`pnpm test`), and `tests/api/` for the endpoints over HTTP (`pnpm test:integration`). `tests/fixtures/` holds recorded samples and `tests/utils/` the fakes, the HTTP mocks and the test app.
+| Block      | Lives in                                       | Is                                                                                | Must not                                                   |
+| ---------- | ---------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| controller | `controllers/<resource>.controller.ts`         | one `async (req, res, next)` per route of the server's own: `getHealth`           | reach a dependency except through `req.app.locals.context` |
+| middleware | `middlewares/<name>.middleware.ts`             | `notFoundHandler` and `errorHandler`, which apply to every request                | answer a route of their own                                |
+| context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext`: the A2A request handler the app mounts                              | —                                                          |
+| model      | `models/<name>.model.ts`                       | the app's types and errors: `app-context`, `config` (`ConfigError`)               | contain logic beyond an error's message                    |
+| helper     | `helpers/<name>.helper.ts`                     | the app's transport-free functions: configuration (`requireVariable`, `readPort`) | take an Express `Request`                                  |
+
+**The agents.** `agents/core/` holds what every agent shares; `agents/<name>/` holds one agent: its definition, and the domain only it needs. Inside both, code goes in blocks, named and placed as above (`agents/<part>/<block>/<name>.<block>.ts`). The blocks the agents use:
+
+| Block    | Lives in                                    | Is                                                                                                                                                                         | Must not                                                                 |
+| -------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| agent    | `agents/<name>/<name>.agent.ts`             | one agent's `AgentDefinition`: its card, its prompt, its tools and what it calls its answer: `weather`                                                                     | run anything itself                                                      |
+| executor | `agents/core/executors/<name>.executor.ts`  | an A2A SDK `AgentExecutor`: `turn-agent`, one agent turn per message, streamed, with `input-required` and cancellation; knows no agent                                     | reach a runner except through the `RunTurn` it is handed                 |
+| runner   | `agents/core/runners/<engine>.runner.ts`    | runs one agent turn on an agent SDK and reports it as turn events: `claude` (one Claude Agent SDK `query()`, its answer a structured `{ outcome, text }` checked with zod) | know about A2A or Express                                                |
+| store    | `agents/core/stores/<name>.store.ts`        | state kept in memory, created by the composition root and handed to what uses it: `session` (the Claude session of each A2A context)                                       | be reached any other way than through what the composition root hands in |
+| client   | `agents/<name>/clients/<service>.client.ts` | one outside service, reached with what it needs handed in: `open-meteo` (validates every answer with zod, throws `OpenMeteoError`)                                         | know about A2A or Express                                                |
+| tool     | `agents/<name>/tools/<name>.tool.ts`        | an agent's tools and the in-process MCP server that offers them: `weather` (`find_city`, `get_forecast`)                                                                   | call a service except through a client                                   |
+| prompt   | `agents/<name>/prompts/<name>.prompt.ts`    | an agent's system prompt: `weather` (the instructions, dated per turn)                                                                                                     | call a model                                                             |
+| model    | `agents/<part>/models/<name>.model.ts`      | types and errors: `turn` (turn events, `RunTurn`) and `agent-definition` in core; `weather` (places, forecasts, `WeatherService`, `OpenMeteoError`) in the weather agent   | contain logic beyond an error's message                                  |
+| helper   | `agents/<part>/helpers/<name>.helper.ts`    | transport-free functions: A2A messages and text parts, the card's JSON-RPC interface and `agentPaths` in core; weather codes and formatting in the weather agent           | take an Express `Request`                                                |
+
+The boundaries, enforced by `no-restricted-imports` in `apps/server/eslint.config.js`:
+
+- **Nothing in `agents/` imports Express or the app**: no Express packages, and none of the app's files or blocks. `server.ts` hands an agent what it needs. The logger is shared.
+- **`core/` imports no agent**, since it serves every agent.
+- **An agent imports `core/` and itself, never another agent.**
+- **In the other direction, by convention:** only `server.ts` (to wire the agents) and `app.ts` (for `agentPaths`) import from `agents/`.
+
+Tests mirror the source: `tests/unit/<block>/` for the app's blocks and `tests/unit/agents/<part>/<block>/` for the agents' (`pnpm test`), and `tests/api/` for the endpoints over HTTP (`pnpm test:integration`). `tests/fixtures/` holds recorded samples and `tests/utils/` the fakes, the HTTP mocks and the test app.
+
+### Adding an agent
+
+1. **Create `agents/<name>/`** with `<name>.agent.ts` exporting a function that returns its `AgentDefinition`, and its prompt, tools and any client, models and helpers in their blocks.
+2. **Keep what is shared in `core/`.** When the new agent needs something another agent has, and it is not about either agent's domain, move it to `core/` rather than importing across agents.
+3. **Wire it in `server.ts`**, as the weather agent is: its turn settings for the runner, a `TurnAgentExecutor`, a `SessionStore` and a request handler of its own.
+4. **With the second agent, give each agent its own endpoints**, for example `/agents/<name>/.well-known/agent-card.json` and `/agents/<name>/a2a/jsonrpc`: an A2A agent is identified by its card and its URL. `AppContext` then holds a request handler per agent, and `app.ts` mounts each under its path.
 
 ### Adding a concept
 
 Code that does not fit a block above is a new concept, and the structure grows to hold it rather than bending around it:
 
-1. **Check the table first.** An HTTP route is a controller, a type is a model, a call to another service is a client, a pure function is a helper.
-2. **Give a new concept a block**: a plural folder under `src/` named for it, files named `<name>.<block>.ts` (`notifiers/slack.notifier.ts`), tests in `tests/unit/<block>/`. Never a file at the root of `src/`, which holds the four files above only.
-3. **Add its row to the table above in the same commit**: where it lives, what it is, and what it must not do, which says what it may depend on.
-4. **Reach it the way its neighbours are reached**: what handlers use goes on `AppContext`; what the executor or the tools use is handed in by `server.ts`.
+1. **Check the tables first.** An HTTP route is a controller, a type is a model, a call to another service is a client, a pure function is a helper, an agent SDK is a runner.
+2. **Give a new concept a block**: a plural folder named for it, files named `<name>.<block>.ts` (`notifiers/slack.notifier.ts`), tests mirrored under `tests/unit/`. An app concept goes under `src/`, an agent concept under `agents/core/` or `agents/<name>/`. Never a file at the root of `src/`, which holds the four files above only.
+3. **Add its row to the right table in the same commit**: where it lives, what it is, and what it must not do, which says what it may depend on.
+4. **Reach it the way its neighbours are reached**: what handlers use goes on `AppContext`; what the executor, a runner or the tools use is handed in by `server.ts`.
 5. **When both apps need the same small piece, copy it** into each, in the block or module where it is used. A shared package (`packages/<name>`, imported by both apps and importing neither) is worth creating only once what they share is substantial and must not drift, such as a protocol both speak beyond what the A2A SDK gives.
 
 ### Commands
@@ -91,11 +116,11 @@ Tests are exempt from both, since `expect(await response.json())` is the test ru
 - **The server runs TypeScript as it is**: no `build`, no `dist/`, `typecheck` is `tsc -b` with `noEmit`. The Express doc's "compiled, not run as it is" does not apply, because the workspace packages export their sources and Node 24 strips the types.
 - **The A2A endpoints are the SDK's own handlers**, mounted in `app.ts` with `app.use` at `/.well-known/agent-card.json` and `/a2a/jsonrpc`, with no controller in front: the SDK answers them, and their requests, answers and errors follow the A2A 1.0 spec (JSON-RPC errors), not the REST API rules. Those govern the server's own routes (`GET /health`) and the not-found answer.
 - **No `express.json()`**: the server's own routes take no body, and the A2A JSON-RPC handler parses its own, answering malformed JSON as a JSON-RPC parse error.
-- **No DAO yet**: the only state is the `session` store, in memory. When it moves to a database it becomes `daos/session.dao.ts`, following Data access.
+- **No DAO yet**: the only state is the `session` store, in memory. When it moves to a database it becomes `agents/core/daos/session.dao.ts`, following Data access.
 - **`GET /health` probes nothing**: Claude and Open-Meteo are reached per turn, and a failing one fails that turn, not the server.
 - **The client is a command line, not an Express app**, so it keeps the Node package layout (`src/main.ts` and its modules).
 - **The root `format` and `format:check` also cover the root's own files** (`*.json`, `*.md`, `*.yaml`), which `pnpm -r` never reaches.
-- **`pnpm test` and `pnpm test:integration` never call Claude or Open-Meteo**: the turn runner, the query and `fetch` are handed in, so tests use recorded samples and fakes.
+- **`pnpm test` and `pnpm test:integration` never call Claude or Open-Meteo**: the turn runner, the SDK's `query()` and `fetch` are handed in, so tests use recorded samples and fakes.
 - **No unit tests for `server.ts`, `app.ts` or the client's `main.ts`**: they only wire. The API tests cover what `app.ts` mounts; running the agent and the command line end to end covers the rest.
 
 ## Node package

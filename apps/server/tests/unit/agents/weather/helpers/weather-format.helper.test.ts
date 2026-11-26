@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatForecast, formatPlaces } from '../../../src/helpers/weather-format.helper.ts';
-import type { Forecast, Place } from '../../../src/models/weather.model.ts';
+import { formatForecast, formatPlaces } from '../../../../../src/agents/weather/helpers/weather-format.helper.ts';
+import type { Forecast, Place } from '../../../../../src/agents/weather/models/weather.model.ts';
 
 const lisbon: Place = {
   name: 'Lisbon',

@@ -1,12 +1,12 @@
 import { TaskState } from '@a2a-js/sdk';
 import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import { describe, expect, it } from 'vitest';
-import type { TurnEvent, TurnRequest } from '../../../src/models/turn.model.ts';
-import { TurnAgentExecutor } from '../../../src/executors/turn-agent.executor.ts';
-import type { RunTurn } from '../../../src/models/turn.model.ts';
-import { SessionStore } from '../../../src/stores/session.store.ts';
-import { fakeEventBus } from '../../utils/fake-event-bus.ts';
-import { requestContext } from '../../utils/request-context-seed.ts';
+import type { TurnEvent, TurnRequest } from '../../../../../src/agents/core/models/turn.model.ts';
+import { TurnAgentExecutor } from '../../../../../src/agents/core/executors/turn-agent.executor.ts';
+import type { RunTurn } from '../../../../../src/agents/core/models/turn.model.ts';
+import { SessionStore } from '../../../../../src/agents/core/stores/session.store.ts';
+import { fakeEventBus } from '../../../../utils/fake-event-bus.ts';
+import { requestContext } from '../../../../utils/request-context-seed.ts';
 
 const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 

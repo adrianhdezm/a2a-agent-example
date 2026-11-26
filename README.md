@@ -88,18 +88,24 @@ Wear a warm coat, gloves and waterproof boots.
 A pnpm workspace. The two apps meet only over A2A and never import each other.
 
 ```text
-apps/server/src          the agent, an Express app
-  server.ts              composition root: configuration, clients, tools, executor, card, listener
+apps/server/src          the server: an Express app, and the agents it serves
+  server.ts              composition root: configuration, the agent's runner, executor and card, the listener
   app.ts                 createApp(context): logging, /health, the A2A card and JSON-RPC endpoint, 404 and errors
   controllers/           health.controller.ts
   middlewares/           not-found and error handlers
-  models/                types and errors: weather, turn events, AppContext
-  helpers/               Agent Card, A2A messages, weather codes and formatting
-  clients/               open-meteo.client.ts, claude.client.ts
-  tools/                 weather.tool.ts: find_city and get_forecast for Claude
-  prompts/               weather.prompt.ts: the instructions
-  executors/             turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
-  stores/                session.store.ts: the Claude session of each A2A context
+  models/, helpers/      AppContext, configuration
+  agents/
+    core/                what every agent shares
+      executors/         turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
+      runners/           claude.runner.ts: one turn on the Claude Agent SDK, as turn events
+      stores/            session.store.ts: the Claude session of each A2A context
+      models/, helpers/  turn events, AgentDefinition, A2A messages, the card's JSON-RPC interface
+    weather/             the weather agent
+      weather.agent.ts   its definition: card, prompt, tools, the forecast answer
+      clients/           open-meteo.client.ts
+      tools/             weather.tool.ts: find_city and get_forecast
+      prompts/           weather.prompt.ts: the instructions
+      models/, helpers/  places and forecasts, weather codes and formatting
 apps/client/src          the A2A terminal client
   main.ts                entry point: flags, connection, the read loop
   args.ts                flags and usage
@@ -111,7 +117,7 @@ apps/client/src          the A2A terminal client
 tooling/                 the shared tsconfig and ESLint config
 ```
 
-The server follows the Express building blocks; [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add one when a new kind of code appears.
+The Express app and the agents are kept apart, and lint enforces it: nothing in `agents/` imports Express, `core/` imports no agent, and agents never import each other. [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add an agent or a new kind of code.
 
 ## Checks
 

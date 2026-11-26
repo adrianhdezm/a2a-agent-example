@@ -4,7 +4,7 @@ import express from 'express';
 import type { Express } from 'express';
 import { pinoHttp } from 'pino-http';
 import { getHealth } from './controllers/health.controller.ts';
-import { agentPaths } from './helpers/agent-card.helper.ts';
+import { agentPaths } from './agents/core/helpers/agent-card.helper.ts';
 import { logger } from './logger.ts';
 import { errorHandler } from './middlewares/error.middleware.ts';
 import { notFoundHandler } from './middlewares/not-found.middleware.ts';

@@ -1,24 +1,20 @@
-import { A2A_PROTOCOL_VERSION } from '@a2a-js/sdk';
 import type { AgentCard } from '@a2a-js/sdk';
-
-/** Where the agent's A2A endpoints live on the server. */
-export const agentPaths = { card: '/.well-known/agent-card.json', jsonRpc: '/a2a/jsonrpc' } as const;
+import { jsonRpcInterface } from '../core/helpers/agent-card.helper.ts';
+import type { AgentDefinition } from '../core/models/agent-definition.model.ts';
+import type { WeatherService } from './models/weather.model.ts';
+import { weatherInstructions } from './prompts/weather.prompt.ts';
+import { weatherMcpServer, weatherServerName, weatherToolNames } from './tools/weather.tool.ts';
 
 const textModes = ['text/plain'];
 
-/** The weather agent's A2A 1.0 card, served at `baseUrl` with one JSON-RPC interface. */
-export function weatherAgentCard(baseUrl: string): AgentCard {
+// Enough round trips for a city lookup, a forecast or two and the answer, with room to ask back.
+const maxTurns = 8;
+
+function weatherAgentCard(baseUrl: string): AgentCard {
   return {
     name: 'Weather Agent',
     description: 'Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.',
-    supportedInterfaces: [
-      {
-        url: `${baseUrl.replace(/\/+$/, '')}${agentPaths.jsonRpc}`,
-        protocolBinding: 'JSONRPC',
-        tenant: '',
-        protocolVersion: A2A_PROTOCOL_VERSION
-      }
-    ],
+    supportedInterfaces: [jsonRpcInterface(baseUrl)],
     provider: undefined,
     version: '0.1.0',
     capabilities: { streaming: true, pushNotifications: false, extensions: [], extendedAgentCard: false },
@@ -43,5 +39,17 @@ export function weatherAgentCard(baseUrl: string): AgentCard {
       }
     ],
     signatures: []
+  };
+}
+
+/** The weather agent: its card, a dated prompt, the `find_city` and `get_forecast` tools on `weather`, and its `forecast` answer. */
+export function weatherAgent(weather: WeatherService): AgentDefinition {
+  return {
+    card: weatherAgentCard,
+    systemPrompt: () => weatherInstructions(new Date()),
+    mcpServers: { [weatherServerName]: weatherMcpServer(weather) },
+    allowedTools: weatherToolNames,
+    maxTurns,
+    answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
   };
 }

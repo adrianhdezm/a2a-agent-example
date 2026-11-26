@@ -2,7 +2,7 @@ import { Role, TaskState } from '@a2a-js/sdk';
 import type { SendMessageRequest, StreamResponse, Task } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { TurnEvent } from '../../src/models/turn.model.ts';
+import type { TurnEvent } from '../../src/agents/core/models/turn.model.ts';
 import { serveTestApp } from '../utils/test-app.ts';
 import type { TestApp } from '../utils/test-app.ts';
 

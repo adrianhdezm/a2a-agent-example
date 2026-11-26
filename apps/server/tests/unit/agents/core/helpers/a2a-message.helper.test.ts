@@ -1,7 +1,7 @@
 import { TaskState } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
 import type { Part } from '@a2a-js/sdk';
-import { answerArtifact, partsText, statusUpdate, textPart } from '../../../src/helpers/a2a-message.helper.ts';
+import { answerArtifact, partsText, statusUpdate, textPart } from '../../../../../src/agents/core/helpers/a2a-message.helper.ts';
 
 const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 

@@ -1,19 +1,14 @@
-import type { McpServerConfig, Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import type { AgentDefinition } from '../models/agent-definition.model.ts';
 import type { TurnEvent, TurnOutcome, TurnRequest } from '../models/turn.model.ts';
 
 /** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
 export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
 
-export interface ClaudeTurnSettings {
+/** What a Claude turn runs with: the agent's prompt and tools, the key, and the SDK's `query()`. */
+export interface ClaudeTurnSettings extends Pick<AgentDefinition, 'systemPrompt' | 'mcpServers' | 'allowedTools' | 'maxTurns'> {
   apiKey: string;
-  /** The system prompt, built per turn so it can carry today's date. */
-  systemPrompt: () => string;
-  /** The in-process MCP server with the agent's tools, and the tool names Claude may call without asking. */
-  mcpServers: Record<string, McpServerConfig>;
-  allowedTools: string[];
-  /** The most model round trips one turn may take. */
-  maxTurns: number;
   query: ClaudeQuery;
 }
 
