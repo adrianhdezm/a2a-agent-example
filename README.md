@@ -96,7 +96,7 @@ apps/server/src          the server: an Express app, and the agents it serves
   models/, helpers/      AppContext, configuration
   agents/
     core/                what every agent shares
-      factories/         a2a-agent.factory.ts: an agent ready to serve, its card completed with where it is served
+      a2a-agent.ts       its entry point: createA2aAgent, an agent ready to serve; and what agents may use from core
       executors/         turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
       runners/           claude.runner.ts: one turn on the Claude Agent SDK, as turn events
       stores/            session.store.ts: the Claude session of each A2A context
@@ -118,7 +118,7 @@ apps/client/src          the A2A terminal client
 tooling/                 the shared tsconfig and ESLint config
 ```
 
-The Express app and the agents are kept apart, and lint enforces it: the app reaches an agent only through its entry point, nothing in `agents/` imports Express, `core/` imports no agent, and agents never import each other. [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add an agent or a new kind of code.
+The Express app and the agents are kept apart, and lint enforces it: the app reaches an agent only through its entry point, nothing in `agents/` imports Express, `core/` imports no agent, an agent reaches core only through `core/a2a-agent.ts`, and agents never import each other. [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add an agent or a new kind of code.
 
 ## Checks
 

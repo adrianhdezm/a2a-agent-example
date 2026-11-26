@@ -1,7 +1,5 @@
-import { createA2aAgent } from '../core/factories/a2a-agent.factory.ts';
-import type { A2aAgent, AgentCardBase } from '../core/models/a2a-agent.model.ts';
-import { runClaudeTurn } from '../core/runners/claude.runner.ts';
-import type { ClaudeQuery, ClaudeTurnSettings } from '../core/runners/claude.runner.ts';
+import { createA2aAgent, runClaudeTurn } from '../core/a2a-agent.ts';
+import type { A2aAgent, AgentCardBase, ClaudeQuery, ClaudeTurnSettings } from '../core/a2a-agent.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
 import type { Fetch } from './clients/open-meteo.client.ts';
 import { weatherInstructions } from './prompts/weather.prompt.ts';

@@ -1,9 +1,14 @@
 import { A2A_PROTOCOL_VERSION } from '@a2a-js/sdk';
 import type { AgentCard } from '@a2a-js/sdk';
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
-import { TurnAgentExecutor } from '../executors/turn-agent.executor.ts';
-import type { A2aAgent, AgentDefinition } from '../models/a2a-agent.model.ts';
-import { SessionStore } from '../stores/session.store.ts';
+import { TurnAgentExecutor } from './executors/turn-agent.executor.ts';
+import type { A2aAgent, AgentDefinition } from './models/a2a-agent.model.ts';
+import { SessionStore } from './stores/session.store.ts';
+
+// core's entry point: what an agent needs from core, and nothing else. Everything below it is core's own.
+export type { A2aAgent, AgentCardBase } from './models/a2a-agent.model.ts';
+export { runClaudeTurn } from './runners/claude.runner.ts';
+export type { ClaudeQuery, ClaudeTurnSettings } from './runners/claude.runner.ts';
 
 /**
  * An agent ready to serve under `baseUrl`, built from its definition: its card with the JSON-RPC endpoint it is served

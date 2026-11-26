@@ -54,14 +54,25 @@ export default [
     rules: agentImports({ regex: String.raw`^\.\./\.\./(?!\.\./)`, message: 'core serves every agent, so it imports none of them.' })
   },
   {
-    // An agent imports core and itself, never another agent.
+    // core's entry point sits one level up, so the same rule reads one level shallower.
+    files: ['src/agents/core/*.ts'],
+    rules: agentImports({ regex: String.raw`^\.\./(?!\.\./)`, message: 'core serves every agent, so it imports none of them.' })
+  },
+  {
+    // An agent imports itself and core's entry point, a2a-agent.ts: never core's insides, never another agent.
     files: ['src/agents/*/*/**/*.ts'],
     ignores: ['src/agents/core/**'],
-    rules: agentImports({ regex: String.raw`^\.\./\.\./(?!core/|\.\./)`, message: 'An agent imports core, never another agent.' })
+    rules: agentImports({
+      regex: String.raw`^\.\./\.\./(?!core/a2a-agent\.ts$|\.\./)`,
+      message: 'An agent imports core only through core/a2a-agent.ts, and never another agent.'
+    })
   },
   {
     files: ['src/agents/*/*.ts'],
     ignores: ['src/agents/core/**'],
-    rules: agentImports({ regex: String.raw`^\.\./(?!core/|\.\./)`, message: 'An agent imports core, never another agent.' })
+    rules: agentImports({
+      regex: String.raw`^\.\./(?!core/a2a-agent\.ts$|\.\./)`,
+      message: 'An agent imports core only through core/a2a-agent.ts, and never another agent.'
+    })
   }
 ];

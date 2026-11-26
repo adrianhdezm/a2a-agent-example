@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createA2aAgent } from '../../../../../src/agents/core/factories/a2a-agent.factory.ts';
-import type { AgentCardBase } from '../../../../../src/agents/core/models/a2a-agent.model.ts';
-import type { TurnEvent } from '../../../../../src/agents/core/models/turn.model.ts';
+import { createA2aAgent } from '../../../../src/agents/core/a2a-agent.ts';
+import type { AgentCardBase } from '../../../../src/agents/core/models/a2a-agent.model.ts';
+import type { TurnEvent } from '../../../../src/agents/core/models/turn.model.ts';
 
 // eslint-disable-next-line @typescript-eslint/require-await -- a turn that is never run
 async function* runTurn(): AsyncIterable<TurnEvent> {
