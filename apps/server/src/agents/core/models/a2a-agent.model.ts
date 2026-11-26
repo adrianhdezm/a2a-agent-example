@@ -4,14 +4,14 @@ import type { AnswerArtifact } from '../helpers/a2a-message.helper.ts';
 import type { RunTurn } from './turn.model.ts';
 
 /**
- * An agent's card as the agent writes it: what the agent is (its name, skills and capabilities), without where it is
- * served, which the factory adds when it serves it.
+ * The part of an agent's card the agent writes: what the agent is (its name, skills and capabilities). The factory builds
+ * the full card on it, adding where the agent is served.
  */
-export type AgentProfile = Omit<AgentCard, 'supportedInterfaces'>;
+export type AgentCardBase = Omit<AgentCard, 'supportedInterfaces'>;
 
-/** What one agent supplies to be served over A2A: its profile, how it runs a turn, and what it calls its answer. */
+/** What one agent supplies to be served over A2A: its card base, how it runs a turn, and what it calls its answer. */
 export interface AgentDefinition {
-  card: AgentProfile;
+  card: AgentCardBase;
   runTurn: RunTurn;
   answerArtifact: AnswerArtifact;
 }

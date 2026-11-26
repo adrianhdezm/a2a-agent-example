@@ -1,5 +1,5 @@
 import { createA2aAgent } from '../core/factories/a2a-agent.factory.ts';
-import type { A2aAgent, AgentProfile } from '../core/models/a2a-agent.model.ts';
+import type { A2aAgent, AgentCardBase } from '../core/models/a2a-agent.model.ts';
 import { runClaudeTurn } from '../core/runners/claude.runner.ts';
 import type { ClaudeQuery, ClaudeTurnSettings } from '../core/runners/claude.runner.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
@@ -23,7 +23,7 @@ const textModes = ['text/plain'];
 // Enough round trips for a city lookup, a forecast or two and the answer, with room to ask back.
 const maxTurns = 8;
 
-const weatherCard: AgentProfile = {
+const weatherCard: AgentCardBase = {
   name: 'Weather Agent',
   description: 'Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.',
   provider: undefined,
