@@ -1,0 +1,25 @@
+{
+  "name": "a2a-agent-example",
+  "version": "0.0.0",
+  "description": "A weather agent on the Claude Agent SDK, served over A2A 1.0, with an interactive A2A command-line client.",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.23.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter server dev",
+    "start": "pnpm --filter server start",
+    "cli": "pnpm --filter client start",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm -r test:integration",
+    "format": "prettier --write --log-level warn \"*.{json,md,yaml}\" && pnpm -r format",
+    "format:check": "prettier --check --log-level warn \"*.{json,md,yaml}\" && pnpm -r format:check"
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  }
+}
