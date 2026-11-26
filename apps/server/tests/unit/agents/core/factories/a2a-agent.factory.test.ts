@@ -3,25 +3,32 @@ import { describe, expect, it } from 'vitest';
 import { createA2aAgent } from '../../../../../src/agents/core/factories/a2a-agent.factory.ts';
 import type { TurnEvent } from '../../../../../src/agents/core/models/turn.model.ts';
 
-const card = { name: 'Test Agent' } as AgentCard;
-
 // eslint-disable-next-line @typescript-eslint/require-await -- a turn that is never run
 async function* runTurn(): AsyncIterable<TurnEvent> {
   yield* [];
 }
 
-describe('createA2aAgent', () => {
-  it("serves the definition's card through a request handler of its own, at the A2A paths", async () => {
-    const agent = createA2aAgent({ card, runTurn, answerArtifact: { name: 'answer', description: 'The answer' } });
+const card = { name: 'Test Agent' } as Omit<AgentCard, 'supportedInterfaces'>;
+const definition = { card, runTurn, answerArtifact: { name: 'answer', description: 'The answer' } };
 
-    expect(agent.card).toBe(card);
-    expect(await agent.requestHandler.getAgentCard()).toBe(card);
+describe('createA2aAgent', () => {
+  it('adds to the card the JSON-RPC endpoint it is served at, under the base URL, on protocol 1.0', () => {
+    const agent = createA2aAgent(definition, 'http://localhost:41241/');
+
+    expect(agent.card).toMatchObject({ name: 'Test Agent' });
+    expect(agent.card.supportedInterfaces).toEqual([
+      { url: 'http://localhost:41241/a2a/jsonrpc', protocolBinding: 'JSONRPC', tenant: '', protocolVersion: '1.0' }
+    ]);
+  });
+
+  it('mounts the card and the JSON-RPC endpoint at the A2A paths, the handler serving the same card', async () => {
+    const agent = createA2aAgent(definition, 'http://localhost:41241');
+
     expect(agent.paths).toEqual({ card: '/.well-known/agent-card.json', jsonRpc: '/a2a/jsonrpc' });
+    expect(await agent.requestHandler.getAgentCard()).toBe(agent.card);
   });
 
   it('gives every agent its own request handler, so no two share tasks', () => {
-    const definition = { card, runTurn, answerArtifact: { name: 'answer', description: 'The answer' } };
-
-    expect(createA2aAgent(definition).requestHandler).not.toBe(createA2aAgent(definition).requestHandler);
+    expect(createA2aAgent(definition, 'http://a').requestHandler).not.toBe(createA2aAgent(definition, 'http://a').requestHandler);
   });
 });

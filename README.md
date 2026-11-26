@@ -96,11 +96,11 @@ apps/server/src          the server: an Express app, and the agents it serves
   models/, helpers/      AppContext, configuration
   agents/
     core/                what every agent shares
-      factories/         a2a-agent.factory.ts: an agent ready to serve, from its card, runner and answer artifact
+      factories/         a2a-agent.factory.ts: an agent ready to serve, its card completed with where it is served
       executors/         turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
       runners/           claude.runner.ts: one turn on the Claude Agent SDK, as turn events
       stores/            session.store.ts: the Claude session of each A2A context
-      models/, helpers/  turn events, AgentDefinition and A2aAgent, A2A messages, the card's JSON-RPC interface
+      models/, helpers/  turn events, AgentDefinition and A2aAgent, A2A messages
     weather/             the weather agent
       weather.agent.ts   its entry point: weatherAgent(options), on Claude with its card, prompt, tools and forecast answer
       clients/           open-meteo.client.ts

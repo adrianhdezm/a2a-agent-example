@@ -1,7 +1,5 @@
-import type { AgentCard } from '@a2a-js/sdk';
 import { createA2aAgent } from '../core/factories/a2a-agent.factory.ts';
-import { jsonRpcInterface } from '../core/helpers/agent-card.helper.ts';
-import type { A2aAgent } from '../core/models/a2a-agent.model.ts';
+import type { A2aAgent, AgentDefinition } from '../core/models/a2a-agent.model.ts';
 import { runClaudeTurn } from '../core/runners/claude.runner.ts';
 import type { ClaudeQuery, ClaudeTurnSettings } from '../core/runners/claude.runner.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
@@ -25,37 +23,34 @@ const textModes = ['text/plain'];
 // Enough round trips for a city lookup, a forecast or two and the answer, with room to ask back.
 const maxTurns = 8;
 
-function weatherAgentCard(baseUrl: string): AgentCard {
-  return {
-    name: 'Weather Agent',
-    description: 'Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.',
-    supportedInterfaces: [jsonRpcInterface(baseUrl)],
-    provider: undefined,
-    version: '0.1.0',
-    capabilities: { streaming: true, pushNotifications: false, extensions: [], extendedAgentCard: false },
-    securitySchemes: {},
-    securityRequirements: [],
-    defaultInputModes: textModes,
-    defaultOutputModes: textModes,
-    skills: [
-      {
-        id: 'weather-forecast',
-        name: 'Weather forecast',
-        description: 'The current weather and a daily forecast for a city: conditions, temperatures, rain and wind, with practical advice.',
-        tags: ['weather', 'forecast', 'travel'],
-        examples: [
-          'Do I need an umbrella in Lisbon tomorrow?',
-          "What's the weather like in Springfield this weekend?",
-          'Is it warmer in Rome or Madrid on Friday?'
-        ],
-        inputModes: textModes,
-        outputModes: textModes,
-        securityRequirements: []
-      }
-    ],
-    signatures: []
-  };
-}
+const weatherCard: AgentDefinition['card'] = {
+  name: 'Weather Agent',
+  description: 'Answers questions about the weather now and for the next 7 days anywhere in the world, from Open-Meteo forecasts.',
+  provider: undefined,
+  version: '0.1.0',
+  capabilities: { streaming: true, pushNotifications: false, extensions: [], extendedAgentCard: false },
+  securitySchemes: {},
+  securityRequirements: [],
+  defaultInputModes: textModes,
+  defaultOutputModes: textModes,
+  skills: [
+    {
+      id: 'weather-forecast',
+      name: 'Weather forecast',
+      description: 'The current weather and a daily forecast for a city: conditions, temperatures, rain and wind, with practical advice.',
+      tags: ['weather', 'forecast', 'travel'],
+      examples: [
+        'Do I need an umbrella in Lisbon tomorrow?',
+        "What's the weather like in Springfield this weekend?",
+        'Is it warmer in Rome or Madrid on Friday?'
+      ],
+      inputModes: textModes,
+      outputModes: textModes,
+      securityRequirements: []
+    }
+  ],
+  signatures: []
+};
 
 /**
  * The weather agent, ready to serve: it runs on Claude with the `find_city` and `get_forecast` tools over Open-Meteo,
@@ -70,9 +65,12 @@ export function weatherAgent({ apiKey, baseUrl, query, fetchUrl }: WeatherAgentO
     maxTurns,
     query
   };
-  return createA2aAgent({
-    card: weatherAgentCard(baseUrl),
-    runTurn: (request) => runClaudeTurn(claude, request),
-    answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
-  });
+  return createA2aAgent(
+    {
+      card: weatherCard,
+      runTurn: (request) => runClaudeTurn(claude, request),
+      answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+    },
+    baseUrl
+  );
 }

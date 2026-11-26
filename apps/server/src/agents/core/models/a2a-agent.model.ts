@@ -5,7 +5,8 @@ import type { RunTurn } from './turn.model.ts';
 
 /** What one agent supplies to be served over A2A: its card, how it runs a turn, and what it calls its answer. */
 export interface AgentDefinition {
-  card: AgentCard;
+  /** What the agent is: its name, skills and capabilities. Where it is served is added when it is served. */
+  card: Omit<AgentCard, 'supportedInterfaces'>;
   runTurn: RunTurn;
   answerArtifact: AnswerArtifact;
 }
