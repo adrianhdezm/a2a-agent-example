@@ -89,6 +89,24 @@ describe('TurnAgentExecutor', () => {
     expect(timeline(events)).not.toContain('artifact forecast');
   });
 
+  it.each([
+    [
+      'a marker in any case, with spaces around it',
+      'Which Springfield?\n  awaiting_user_input  \n',
+      'status TASK_STATE_INPUT_REQUIRED',
+      'Which Springfield?'
+    ],
+    ['an answer without a marker as completed', 'Sunny all week.', 'artifact forecast', 'Sunny all week.']
+  ])('reads %s', async (_case, answer, carriedBy, text) => {
+    const { runTurn } = fakeTurns([{ type: 'result', ok: true, text: answer }]);
+    const { bus, events } = fakeEventBus();
+
+    await executorFor(runTurn).execute(requestContext('Weather?', taskRef), bus);
+
+    const carrier = events.find((event) => timeline([event])[0] === carriedBy);
+    expect(textOf(carrier)).toBe(text);
+  });
+
   it('resumes the Claude session of the context for the next message', async () => {
     const { requests, runTurn } = fakeTurns([
       { type: 'session', sessionId: 'session-1' },

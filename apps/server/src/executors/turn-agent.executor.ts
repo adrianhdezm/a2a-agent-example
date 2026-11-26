@@ -5,7 +5,7 @@ import { answerArtifact, partsText, statusUpdate, submittedTask } from '../helpe
 import type { AnswerArtifact, TaskRef } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../logger.ts';
 import type { RunTurn } from '../models/turn.model.ts';
-import { readTurnEnd } from '../prompts/turn-end.prompt.ts';
+import { completedMarker, inputRequiredMarker } from '../prompts/turn-end.prompt.ts';
 import type { SessionStore } from '../stores/session.store.ts';
 
 /** How a turn ended, as the task's final state and the text that goes with it. */
@@ -80,10 +80,15 @@ export class TurnAgentExecutor implements AgentExecutor {
           if (!event.ok) {
             return { state: TaskState.TASK_STATE_FAILED, text: `Agent error: ${event.error}` };
           }
-          const answer = readTurnEnd(event.text);
-          return answer.outcome === 'completed'
-            ? { state: TaskState.TASK_STATE_COMPLETED, text: answer.text || 'Done.' }
-            : { state: TaskState.TASK_STATE_INPUT_REQUIRED, text: answer.text };
+          // The answer's last line is the marker turnEndInstructions asks for. An answer without one counts as
+          // completed, so a model that forgets the marker still delivers its answer.
+          const lines = event.text.trimEnd().split('\n');
+          const marker = lines.at(-1)?.trim().toUpperCase();
+          const text =
+            marker === completedMarker || marker === inputRequiredMarker ? lines.slice(0, -1).join('\n').trim() : event.text.trim();
+          return marker === inputRequiredMarker
+            ? { state: TaskState.TASK_STATE_INPUT_REQUIRED, text }
+            : { state: TaskState.TASK_STATE_COMPLETED, text: text || 'Done.' };
         }
       }
     }
