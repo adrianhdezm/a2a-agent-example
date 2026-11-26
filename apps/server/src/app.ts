@@ -4,7 +4,6 @@ import express from 'express';
 import type { Express } from 'express';
 import { pinoHttp } from 'pino-http';
 import { getHealth } from './controllers/health.controller.ts';
-import { agentPaths } from './agents/core/helpers/agent-card.helper.ts';
 import { logger } from './logger.ts';
 import { errorHandler } from './middlewares/error.middleware.ts';
 import { notFoundHandler } from './middlewares/not-found.middleware.ts';
@@ -23,8 +22,9 @@ export function createApp(context: AppContext): Express {
   app.get('/health', getHealth);
   // The A2A endpoints are the SDK's own handlers, with no controller in front: the SDK answers them, as the A2A spec
   // says. app.use, not app.get or app.post, because they are routers that match `/` beneath the mount path.
-  app.use(agentPaths.card, agentCardHandler({ agentCardProvider: context.requestHandler }));
-  app.use(agentPaths.jsonRpc, jsonRpcHandler({ requestHandler: context.requestHandler, userBuilder: UserBuilder.noAuthentication }));
+  const { requestHandler, paths } = context.agent;
+  app.use(paths.card, agentCardHandler({ agentCardProvider: requestHandler }));
+  app.use(paths.jsonRpc, jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

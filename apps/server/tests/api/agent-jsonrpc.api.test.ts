@@ -2,20 +2,13 @@ import { Role, TaskState } from '@a2a-js/sdk';
 import type { SendMessageRequest, StreamResponse, Task } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { TurnEvent } from '../../src/agents/core/models/turn.model.ts';
+import { forecastCall, init, sessionId, structuredResult } from '../fixtures/claude-messages.ts';
 import { serveTestApp } from '../utils/test-app.ts';
 import type { TestApp } from '../utils/test-app.ts';
 
-const answer: TurnEvent[] = [
-  { type: 'session', sessionId: 'session-1' },
-  { type: 'progress', text: 'Calling get_forecast {"latitude":38.72,"longitude":-9.13,"days":2}' },
-  { type: 'result', ok: true, outcome: 'completed', text: 'Take an umbrella tomorrow.' }
-];
-
-const question: TurnEvent[] = [
-  { type: 'session', sessionId: 'session-1' },
-  { type: 'result', ok: true, outcome: 'input-required', text: 'Which Springfield?' }
-];
+// What the Claude Agent SDK streams for each turn: the session, any tool call, and the structured answer.
+const answer = [init, forecastCall, structuredResult({ outcome: 'completed', text: 'Take an umbrella tomorrow.' })];
+const question = [init, structuredResult({ outcome: 'input-required', text: 'Which Springfield?' })];
 
 function message(text: string, taskRef: { contextId?: string; taskId?: string } = {}): SendMessageRequest {
   return {
@@ -56,6 +49,7 @@ describe('POST /a2a/jsonrpc', () => {
       name: 'forecast',
       parts: [{ content: { $case: 'text', value: 'Take an umbrella tomorrow.' } }]
     });
+    expect(app.turns[0]?.allowedTools).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
   });
 
   it('streams the task, the progress, the artifact and the final state', async () => {
@@ -83,7 +77,7 @@ describe('POST /a2a/jsonrpc', () => {
     expect(answered).toMatchObject({ id: asked.id, contextId: asked.contextId, status: { state: TaskState.TASK_STATE_COMPLETED } });
     expect(app.turns.map(({ prompt, sessionId }) => [prompt, sessionId])).toEqual([
       ['Springfield this weekend?', undefined],
-      ['Illinois', 'session-1']
+      ['Illinois', sessionId]
     ]);
   });
 

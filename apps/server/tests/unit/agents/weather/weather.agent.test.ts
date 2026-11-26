@@ -1,25 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { weatherAgent } from '../../../../src/agents/weather/weather.agent.ts';
-import type { WeatherService } from '../../../../src/agents/weather/models/weather.model.ts';
-
-const unusedWeather: WeatherService = {
-  findPlaces: () => Promise.reject(new Error('not called')),
-  forecast: () => Promise.reject(new Error('not called'))
-};
 
 describe('weatherAgent', () => {
-  const agent = weatherAgent(unusedWeather);
+  const agent = weatherAgent({ apiKey: 'test-key', baseUrl: 'http://localhost:41241' });
 
-  it('serves a card with one JSON-RPC interface, streaming and no push notifications', () => {
-    const card = agent.card('http://localhost:41241');
-
-    expect(card.supportedInterfaces.map(({ url }) => url)).toEqual(['http://localhost:41241/a2a/jsonrpc']);
-    expect(card.capabilities).toMatchObject({ streaming: true, pushNotifications: false });
+  it('serves a card with one JSON-RPC interface under the base URL, streaming and no push notifications', () => {
+    expect(agent.card.name).toBe('Weather Agent');
+    expect(agent.card.supportedInterfaces.map(({ url }) => url)).toEqual(['http://localhost:41241/a2a/jsonrpc']);
+    expect(agent.card.capabilities).toMatchObject({ streaming: true, pushNotifications: false });
   });
 
-  it('gives Claude the two weather tools and names its answer forecast', () => {
-    expect(Object.keys(agent.mcpServers)).toEqual(['weather']);
-    expect(agent.allowedTools).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
-    expect(agent.answerArtifact.name).toBe('forecast');
+  it('mounts its card and JSON-RPC endpoint at the A2A paths, with a request handler that serves the same card', async () => {
+    expect(agent.paths).toEqual({ card: '/.well-known/agent-card.json', jsonRpc: '/a2a/jsonrpc' });
+    expect(await agent.requestHandler.getAgentCard()).toBe(agent.card);
   });
 });

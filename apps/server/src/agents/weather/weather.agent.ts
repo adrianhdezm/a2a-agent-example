@@ -1,9 +1,24 @@
 import type { AgentCard } from '@a2a-js/sdk';
+import { createA2aAgent } from '../core/factories/a2a-agent.factory.ts';
 import { jsonRpcInterface } from '../core/helpers/agent-card.helper.ts';
-import type { AgentDefinition } from '../core/models/agent-definition.model.ts';
-import type { WeatherService } from './models/weather.model.ts';
+import type { A2aAgent } from '../core/models/a2a-agent.model.ts';
+import { runClaudeTurn } from '../core/runners/claude.runner.ts';
+import type { ClaudeQuery, ClaudeTurnSettings } from '../core/runners/claude.runner.ts';
+import { openMeteoClient } from './clients/open-meteo.client.ts';
+import type { Fetch } from './clients/open-meteo.client.ts';
 import { weatherInstructions } from './prompts/weather.prompt.ts';
 import { weatherMcpServer, weatherServerName, weatherToolNames } from './tools/weather.tool.ts';
+
+/** What the weather agent needs from the server that runs it. */
+export interface WeatherAgentOptions {
+  /** The Anthropic API key Claude runs with. */
+  apiKey: string;
+  /** Where the server is reached, for the card's endpoint URL. */
+  baseUrl: string;
+  /** The Claude Agent SDK's `query()` and the global `fetch`, unless a test hands in its own. */
+  query?: ClaudeQuery;
+  fetchUrl?: Fetch;
+}
 
 const textModes = ['text/plain'];
 
@@ -42,14 +57,22 @@ function weatherAgentCard(baseUrl: string): AgentCard {
   };
 }
 
-/** The weather agent: its card, a dated prompt, the `find_city` and `get_forecast` tools on `weather`, and its `forecast` answer. */
-export function weatherAgent(weather: WeatherService): AgentDefinition {
-  return {
-    card: weatherAgentCard,
+/**
+ * The weather agent, ready to serve: it runs on Claude with the `find_city` and `get_forecast` tools over Open-Meteo,
+ * a prompt dated per turn, and answers in a `forecast` artifact.
+ */
+export function weatherAgent({ apiKey, baseUrl, query, fetchUrl }: WeatherAgentOptions): A2aAgent {
+  const claude: ClaudeTurnSettings = {
+    apiKey,
     systemPrompt: () => weatherInstructions(new Date()),
-    mcpServers: { [weatherServerName]: weatherMcpServer(weather) },
+    mcpServers: { [weatherServerName]: weatherMcpServer(openMeteoClient(fetchUrl)) },
     allowedTools: weatherToolNames,
     maxTurns,
-    answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+    query
   };
+  return createA2aAgent({
+    card: weatherAgentCard(baseUrl),
+    runTurn: (request) => runClaudeTurn(claude, request),
+    answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+  });
 }

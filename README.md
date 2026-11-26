@@ -89,19 +89,20 @@ A pnpm workspace. The two apps meet only over A2A and never import each other.
 
 ```text
 apps/server/src          the server: an Express app, and the agents it serves
-  server.ts              composition root: configuration, the agent's runner, executor and card, the listener
+  server.ts              composition root: configuration, weatherAgent({ apiKey, baseUrl }), the listener
   app.ts                 createApp(context): logging, /health, the A2A card and JSON-RPC endpoint, 404 and errors
   controllers/           health.controller.ts
   middlewares/           not-found and error handlers
   models/, helpers/      AppContext, configuration
   agents/
     core/                what every agent shares
+      factories/         a2a-agent.factory.ts: an agent ready to serve, from its card, runner and answer artifact
       executors/         turn-agent.executor.ts: the A2A AgentExecutor, for any agent that answers in turns
       runners/           claude.runner.ts: one turn on the Claude Agent SDK, as turn events
       stores/            session.store.ts: the Claude session of each A2A context
-      models/, helpers/  turn events, AgentDefinition, A2A messages, the card's JSON-RPC interface
+      models/, helpers/  turn events, AgentDefinition and A2aAgent, A2A messages, the card's JSON-RPC interface
     weather/             the weather agent
-      weather.agent.ts   its definition: card, prompt, tools, the forecast answer
+      weather.agent.ts   its entry point: weatherAgent(options), on Claude with its card, prompt, tools and forecast answer
       clients/           open-meteo.client.ts
       tools/             weather.tool.ts: find_city and get_forecast
       prompts/           weather.prompt.ts: the instructions
@@ -117,7 +118,7 @@ apps/client/src          the A2A terminal client
 tooling/                 the shared tsconfig and ESLint config
 ```
 
-The Express app and the agents are kept apart, and lint enforces it: nothing in `agents/` imports Express, `core/` imports no agent, and agents never import each other. [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add an agent or a new kind of code.
+The Express app and the agents are kept apart, and lint enforces it: the app reaches an agent only through its entry point, nothing in `agents/` imports Express, `core/` imports no agent, and agents never import each other. [`coding-conventions.md`](coding-conventions.md) says what each block may hold, and how to add an agent or a new kind of code.
 
 ## Checks
 

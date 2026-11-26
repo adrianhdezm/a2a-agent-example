@@ -18,6 +18,17 @@ export const toolCall = {
   }
 } as unknown as SDKMessage;
 
+// A forecast call on its own, with no text before it.
+export const forecastCall = {
+  type: 'assistant',
+  session_id: sessionId,
+  message: {
+    content: [
+      { type: 'tool_use', id: 'toolu_03', name: 'mcp__weather__get_forecast', input: { latitude: 38.72, longitude: -9.13, days: 2 } }
+    ]
+  }
+} as unknown as SDKMessage;
+
 // The answer, delivered through the SDK's StructuredOutput tool and then carried by the result message.
 export const answer = {
   type: 'assistant',
@@ -29,7 +40,8 @@ export const answer = {
   }
 } as unknown as SDKMessage;
 
-function result(structuredOutput: unknown): SDKMessage {
+/** A successful result carrying `structuredOutput` as its structured answer. */
+export function structuredResult(structuredOutput: unknown): SDKMessage {
   return {
     type: 'result',
     subtype: 'success',
@@ -39,10 +51,10 @@ function result(structuredOutput: unknown): SDKMessage {
   } as unknown as SDKMessage;
 }
 
-export const success = result({ outcome: 'completed', text: 'Take an umbrella tomorrow: 85% chance of rain.' });
+export const success = structuredResult({ outcome: 'completed', text: 'Take an umbrella tomorrow: 85% chance of rain.' });
 
-export const question = result({ outcome: 'input-required', text: 'Springfield, Illinois or Springfield, Missouri?' });
+export const question = structuredResult({ outcome: 'input-required', text: 'Springfield, Illinois or Springfield, Missouri?' });
 
-export const unreadable = result({ answer: 'Take an umbrella.' });
+export const unreadable = structuredResult({ answer: 'Take an umbrella.' });
 
 export const maxTurns = { type: 'result', subtype: 'error_max_turns', session_id: sessionId, errors: [] } as unknown as SDKMessage;

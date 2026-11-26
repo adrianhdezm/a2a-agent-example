@@ -1,15 +1,22 @@
-import type { Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { query as sdkQuery } from '@anthropic-ai/claude-agent-sdk';
+import type { McpServerConfig, Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import type { AgentDefinition } from '../models/agent-definition.model.ts';
 import type { TurnEvent, TurnOutcome, TurnRequest } from '../models/turn.model.ts';
 
 /** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
 export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
 
-/** What a Claude turn runs with: the agent's prompt and tools, the key, and the SDK's `query()`. */
-export interface ClaudeTurnSettings extends Pick<AgentDefinition, 'systemPrompt' | 'mcpServers' | 'allowedTools' | 'maxTurns'> {
+/** What a Claude turn runs with: the agent's prompt and tools, the key, and the SDK's `query()` unless a test hands in its own. */
+export interface ClaudeTurnSettings {
   apiKey: string;
-  query: ClaudeQuery;
+  /** The system prompt, built per turn so it can carry today's date. */
+  systemPrompt: () => string;
+  /** The in-process MCP servers with the agent's tools, and the tool names Claude may call without asking. */
+  mcpServers: Record<string, McpServerConfig>;
+  allowedTools: string[];
+  /** The most model round trips one turn may take. */
+  maxTurns: number;
+  query?: ClaudeQuery;
 }
 
 // How every turn must end, enforced by the SDK: whether the question is answered, and the text the user reads.
@@ -89,7 +96,8 @@ export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest
 /** Runs one Claude turn and yields what it reports; aborting the request's controller stops it. */
 export async function* runClaudeTurn(settings: ClaudeTurnSettings, request: TurnRequest): AsyncIterable<TurnEvent> {
   const options = claudeOptions(settings, request);
-  const messages = settings.query({ prompt: request.prompt, options });
+  const query = settings.query ?? sdkQuery;
+  const messages = query({ prompt: request.prompt, options });
   for await (const message of messages) {
     yield* translateClaudeMessage(message);
   }

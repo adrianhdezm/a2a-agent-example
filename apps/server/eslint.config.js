@@ -27,6 +27,24 @@ export default [
     rules: { '@typescript-eslint/require-await': 'off' }
   },
   {
+    // The app reaches an agent only through its entry point, <name>.agent.ts; core and the agent's blocks stay inside.
+    files: ['src/**/*.ts'],
+    ignores: ['src/agents/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: String.raw`(^|/)agents/(?![^/]+/[^/]+\.agent\.ts$)`,
+              message: 'The app reaches an agent only through its <name>.agent.ts, which hands back everything needed to serve it.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     files: ['src/agents/**/*.ts'],
     rules: agentImports()
   },
