@@ -1,11 +1,11 @@
 import { TaskState } from '@a2a-js/sdk';
 import { AgentEvent } from '@a2a-js/sdk/server';
 import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
-import { forecastArtifact, partsText, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
-import type { TaskRef } from '../helpers/a2a-message.helper.ts';
+import { answerArtifact, partsText, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
+import type { AnswerArtifact, TaskRef } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../logger.ts';
 import type { RunTurn } from '../models/turn.model.ts';
-import { readTurnEnd } from '../prompts/weather.prompt.ts';
+import { readTurnEnd } from '../prompts/turn-end.prompt.ts';
 import type { SessionStore } from '../stores/session.store.ts';
 
 /** How a turn ended, as the task's final state and the text that goes with it. */
@@ -14,19 +14,29 @@ interface TurnEnd {
   text: string;
 }
 
+/** What a `TurnAgentExecutor` runs on: how it runs a turn, where it keeps sessions, and what it calls its answer. */
+export interface TurnAgentOptions {
+  runTurn: RunTurn;
+  sessions: SessionStore;
+  answerArtifact: AnswerArtifact;
+}
+
 /**
- * The weather agent behind A2A. Each message runs one Claude turn in the Claude session of its `contextId`, so a
- * conversation keeps its history; the turn streams as `WORKING` updates and ends `COMPLETED` with a `forecast`
- * artifact, `INPUT_REQUIRED` with the agent's question, `FAILED`, or `CANCELED`.
+ * Any agent that answers in turns, behind A2A. Each message runs one turn in the session of its `contextId`, so a
+ * conversation keeps its history; the turn streams as `WORKING` updates and ends `COMPLETED` with the answer as an
+ * artifact, `INPUT_REQUIRED` with the agent's question, `FAILED`, or `CANCELED`. The agent's prompt must end with
+ * `turnEndInstructions`, whose marker says which.
  */
-export class WeatherAgentExecutor implements AgentExecutor {
+export class TurnAgentExecutor implements AgentExecutor {
   readonly #runTurn: RunTurn;
   readonly #sessions: SessionStore;
+  readonly #answerArtifact: AnswerArtifact;
   readonly #running = new Map<string, AbortController>();
 
-  constructor(runTurn: RunTurn, sessions: SessionStore) {
+  constructor({ runTurn, sessions, answerArtifact }: TurnAgentOptions) {
     this.#runTurn = runTurn;
     this.#sessions = sessions;
+    this.#answerArtifact = answerArtifact;
   }
 
   async execute(context: RequestContext, eventBus: ExecutionEventBus): Promise<void> {
@@ -83,7 +93,7 @@ export class WeatherAgentExecutor implements AgentExecutor {
     return { state: TaskState.TASK_STATE_FAILED, text: 'Agent error: the turn ended without an answer' };
   }
 
-  // A completed answer becomes the `forecast` artifact; a question, a failure or a cancellation rides on the status.
+  // A completed answer becomes the answer artifact; a question, a failure or a cancellation rides on the status.
   #publishEnd(taskRef: TaskRef, end: TurnEnd, eventBus: ExecutionEventBus): void {
     const fields = { ...taskRef, state: TaskState[end.state] };
     if (end.state === TaskState.TASK_STATE_FAILED) {
@@ -92,7 +102,7 @@ export class WeatherAgentExecutor implements AgentExecutor {
       logger.info(fields, 'turn ended');
     }
     if (end.state === TaskState.TASK_STATE_COMPLETED) {
-      eventBus.publish(AgentEvent.artifactUpdate(forecastArtifact(taskRef, end.text)));
+      eventBus.publish(AgentEvent.artifactUpdate(answerArtifact(taskRef, end.text, this.#answerArtifact)));
       eventBus.publish(AgentEvent.statusUpdate(statusUpdate(taskRef, end.state)));
       return;
     }

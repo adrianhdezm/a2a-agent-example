@@ -1,16 +1,20 @@
 import { TaskState } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
 import type { Part } from '@a2a-js/sdk';
-import { forecastArtifact, partsText, statusUpdate, textPart } from '../../../src/helpers/a2a-message.helper.ts';
+import { answerArtifact, partsText, statusUpdate, textPart } from '../../../src/helpers/a2a-message.helper.ts';
 
 const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 
 describe('a2a-message.helper', () => {
-  it('holds an answer as one complete text artifact named forecast', () => {
-    const update = forecastArtifact(taskRef, 'Take an umbrella.');
+  it('holds an answer as one complete text artifact, named as the agent says', () => {
+    const update = answerArtifact(taskRef, 'Take an umbrella.', { name: 'forecast', description: 'The answer' });
 
     expect(update).toMatchObject({ ...taskRef, append: false, lastChunk: true });
-    expect(update.artifact).toMatchObject({ name: 'forecast', parts: [{ content: { $case: 'text', value: 'Take an umbrella.' } }] });
+    expect(update.artifact).toMatchObject({
+      name: 'forecast',
+      description: 'The answer',
+      parts: [{ content: { $case: 'text', value: 'Take an umbrella.' } }]
+    });
   });
 
   it('carries text on a status update as an agent message, and none without text', () => {

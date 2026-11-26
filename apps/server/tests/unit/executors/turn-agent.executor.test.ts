@@ -2,12 +2,18 @@ import { TaskState } from '@a2a-js/sdk';
 import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import { describe, expect, it } from 'vitest';
 import type { TurnEvent, TurnRequest } from '../../../src/models/turn.model.ts';
-import { WeatherAgentExecutor } from '../../../src/executors/weather-agent.executor.ts';
+import { TurnAgentExecutor } from '../../../src/executors/turn-agent.executor.ts';
+import type { RunTurn } from '../../../src/models/turn.model.ts';
 import { SessionStore } from '../../../src/stores/session.store.ts';
 import { fakeEventBus } from '../../utils/fake-event-bus.ts';
 import { requestContext } from '../../utils/request-context-seed.ts';
 
 const taskRef = { taskId: 'task-1', contextId: 'context-1' };
+
+/** An executor that keeps its sessions in `sessions` and names its answer `forecast`. */
+function executorFor(runTurn: RunTurn, sessions = new SessionStore()) {
+  return new TurnAgentExecutor({ runTurn, sessions, answerArtifact: { name: 'forecast', description: 'The answer' } });
+}
 
 /** A turn runner that answers every turn with `events`, and records what it was asked. */
 function fakeTurns(events: TurnEvent[]) {
@@ -46,7 +52,7 @@ function textOf(event: AgentExecutionEvent | undefined): string | undefined {
   return content?.$case === 'text' ? content.value : undefined;
 }
 
-describe('WeatherAgentExecutor', () => {
+describe('TurnAgentExecutor', () => {
   it('streams progress, then completes with the answer as the forecast artifact', async () => {
     // Arrange
     const { runTurn } = fakeTurns([
@@ -57,7 +63,7 @@ describe('WeatherAgentExecutor', () => {
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
+    await executorFor(runTurn).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     // Assert
     expect(timeline(events)).toEqual([
@@ -76,7 +82,7 @@ describe('WeatherAgentExecutor', () => {
     const { runTurn } = fakeTurns([{ type: 'result', ok: true, text: 'Springfield, Illinois or Missouri?\nAWAITING_USER_INPUT' }]);
     const { bus, events } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Springfield this weekend?', taskRef), bus);
+    await executorFor(runTurn).execute(requestContext('Springfield this weekend?', taskRef), bus);
 
     expect(timeline(events).at(-1)).toBe('status TASK_STATE_INPUT_REQUIRED');
     expect(textOf(events.at(-1))).toBe('Springfield, Illinois or Missouri?');
@@ -88,7 +94,7 @@ describe('WeatherAgentExecutor', () => {
       { type: 'session', sessionId: 'session-1' },
       { type: 'result', ok: true, text: 'Which Springfield?\nAWAITING_USER_INPUT' }
     ]);
-    const executor = new WeatherAgentExecutor(runTurn, new SessionStore());
+    const executor = executorFor(runTurn);
 
     await executor.execute(requestContext('Springfield this weekend?', taskRef), fakeEventBus().bus);
     await executor.execute(requestContext('Illinois', taskRef), fakeEventBus().bus);
@@ -108,7 +114,7 @@ describe('WeatherAgentExecutor', () => {
     const { runTurn } = fakeTurns(turn);
     const { bus, events, finishedCalls } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
+    await executorFor(runTurn).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     expect(timeline(events).at(-1)).toBe('status TASK_STATE_FAILED');
     expect(textOf(events.at(-1))).toBe(message);
@@ -122,7 +128,7 @@ describe('WeatherAgentExecutor', () => {
     }
     const { bus, events } = fakeEventBus();
 
-    await new WeatherAgentExecutor(runTurn, new SessionStore()).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
+    await executorFor(runTurn).execute(requestContext('Lisbon tomorrow?', taskRef), bus);
 
     expect(textOf(events.at(-1))).toBe('Agent error: spawn claude ENOENT');
   });
@@ -142,7 +148,7 @@ describe('WeatherAgentExecutor', () => {
       });
       yield { type: 'result', ok: true, text: 'never' };
     }
-    const executor = new WeatherAgentExecutor(runTurn, new SessionStore());
+    const executor = executorFor(runTurn);
     const { bus, events, finishedCalls } = fakeEventBus();
 
     // Act

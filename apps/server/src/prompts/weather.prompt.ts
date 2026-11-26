@@ -1,10 +1,6 @@
-/** How a turn ends: the question is answered, or the agent needs the user to say more. */
-export type TurnOutcome = 'completed' | 'input-required';
+import { turnEndInstructions } from './turn-end.prompt.ts';
 
-const completedMarker = 'COMPLETED';
-const inputRequiredMarker = 'AWAITING_USER_INPUT';
-
-/** The weather agent's system prompt, dated `now` so "tomorrow" and "this weekend" mean something. */
+/** The weather agent's system prompt, dated `now` so "tomorrow" and "this weekend" mean something; it ends with the turn-end instructions. */
 export function weatherInstructions(now: Date): string {
   return [
     'You are a weather assistant. You answer questions about the weather now and in the coming days, anywhere in the world,',
@@ -19,22 +15,6 @@ export function weatherInstructions(now: Date): string {
     'Answer in a few short sentences or a short list: the conditions, the temperature range in °C, the chance of',
     'rain or snow, and wind when it is strong. Add practical advice when it helps (an umbrella, a warm coat).',
     '',
-    '## Output instructions',
-    '',
-    `ALWAYS end your response with either "${completedMarker}" or "${inputRequiredMarker}" on its own line.`,
-    `Use ${completedMarker} when you have answered the question, and ${inputRequiredMarker} when you need the user to tell you more.`
+    turnEndInstructions
   ].join('\n');
-}
-
-/**
- * Splits an answer into its text and how the turn ended, read from the marker on its last line. An answer without a
- * marker counts as completed, so a model that forgets it still delivers its answer.
- */
-export function readTurnEnd(answer: string): { outcome: TurnOutcome; text: string } {
-  const lines = answer.trimEnd().split('\n');
-  const last = lines.at(-1)?.trim().toUpperCase();
-  if (last === completedMarker || last === inputRequiredMarker) {
-    return { outcome: last === completedMarker ? 'completed' : 'input-required', text: lines.slice(0, -1).join('\n').trim() };
-  }
-  return { outcome: 'completed', text: answer.trim() };
 }

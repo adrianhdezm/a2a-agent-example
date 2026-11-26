@@ -51,14 +51,20 @@ export function statusUpdate(taskRef: TaskRef, state: TaskState, text?: string):
   };
 }
 
-/** The agent's answer as one complete text artifact named `forecast`. */
-export function forecastArtifact(taskRef: TaskRef, text: string): TaskArtifactUpdateEvent {
+/** What an agent calls the artifact that holds its answer. */
+export interface AnswerArtifact {
+  name: string;
+  description: string;
+}
+
+/** The agent's answer as one complete text artifact, named and described as `answer` says. */
+export function answerArtifact(taskRef: TaskRef, text: string, answer: AnswerArtifact): TaskArtifactUpdateEvent {
   return {
     ...taskRef,
     artifact: {
       artifactId: randomUUID(),
-      name: 'forecast',
-      description: "The weather agent's answer",
+      name: answer.name,
+      description: answer.description,
       parts: [textPart(text)],
       metadata: undefined,
       extensions: []

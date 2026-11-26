@@ -4,7 +4,7 @@ import { createApp } from './app.ts';
 import { runClaudeTurn } from './clients/claude.client.ts';
 import type { ClaudeTurnSettings } from './clients/claude.client.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
-import { WeatherAgentExecutor } from './executors/weather-agent.executor.ts';
+import { TurnAgentExecutor } from './executors/turn-agent.executor.ts';
 import { agentPaths, weatherAgentCard } from './helpers/agent-card.helper.ts';
 import { readPort, requireVariable } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
@@ -27,7 +27,11 @@ const claude: ClaudeTurnSettings = {
   maxTurns,
   query
 };
-const executor = new WeatherAgentExecutor((request) => runClaudeTurn(claude, request), new SessionStore());
+const executor = new TurnAgentExecutor({
+  runTurn: (request) => runClaudeTurn(claude, request),
+  sessions: new SessionStore(),
+  answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+});
 const card = weatherAgentCard(baseUrl);
 const requestHandler = new DefaultRequestHandler(card, new InMemoryTaskStore(), executor);
 

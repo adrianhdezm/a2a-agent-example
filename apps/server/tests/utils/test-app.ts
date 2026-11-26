@@ -1,6 +1,6 @@
 import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { createApp } from '../../src/app.ts';
-import { WeatherAgentExecutor } from '../../src/executors/weather-agent.executor.ts';
+import { TurnAgentExecutor } from '../../src/executors/turn-agent.executor.ts';
 import { weatherAgentCard } from '../../src/helpers/agent-card.helper.ts';
 import type { TurnEvent, TurnRequest } from '../../src/models/turn.model.ts';
 import { SessionStore } from '../../src/stores/session.store.ts';
@@ -24,7 +24,11 @@ export async function serveTestApp(script: TurnEvent[][]): Promise<TestApp> {
     turns.push(request);
     yield* script[Math.min(turns.length, script.length) - 1] ?? [];
   }
-  const executor = new WeatherAgentExecutor(runTurn, new SessionStore());
+  const executor = new TurnAgentExecutor({
+    runTurn,
+    sessions: new SessionStore(),
+    answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
+  });
   const requestHandler = new DefaultRequestHandler(weatherAgentCard(server.baseUrl), new InMemoryTaskStore(), executor);
   server.serve(createApp({ requestHandler }));
   return { ...server, turns };
