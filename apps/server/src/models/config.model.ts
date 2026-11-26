@@ -8,3 +8,9 @@ export class ConfigError extends Error {
     this.variable = variable;
   }
 }
+
+/** A runner as configuration names it, for an agent's entry point to resolve. */
+export interface RunnerChoice {
+  name: string;
+  model?: string;
+}

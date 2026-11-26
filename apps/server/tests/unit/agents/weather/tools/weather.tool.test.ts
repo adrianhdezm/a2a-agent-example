@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { formatForecast, formatPlaces } from '../../../../../src/agents/weather/helpers/weather-format.helper.ts';
 import { OpenMeteoError } from '../../../../../src/agents/weather/models/weather.model.ts';
 import type { Forecast, Place, WeatherService } from '../../../../../src/agents/weather/models/weather.model.ts';
-import { findCityTool, getForecastTool, weatherToolNames } from '../../../../../src/agents/weather/tools/weather.tool.ts';
+import { runTool } from '../../../../../src/agents/core/helpers/tool.helper.ts';
+import { findCityTool, getForecastTool, weatherTools } from '../../../../../src/agents/weather/tools/weather.tool.ts';
 
 const lisbon: Place = {
   name: 'Lisbon',
@@ -27,15 +28,17 @@ function fakeWeather(overrides: Partial<WeatherService> = {}): WeatherService {
 }
 
 describe('weather.tool', () => {
-  it('names the tools as Claude sees them on the weather server', () => {
-    expect(weatherToolNames).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
+  const context = { contextId: 'context-1', signal: new AbortController().signal };
+
+  it('offers find_city and get_forecast', () => {
+    expect(weatherTools(fakeWeather()).map(({ name }) => name)).toEqual(['find_city', 'get_forecast']);
   });
 
   describe('find_city', () => {
     it('answers the matching places as text', async () => {
-      const result = await findCityTool(fakeWeather()).handler({ name: 'Lisbon' }, {});
+      const result = await runTool(findCityTool(fakeWeather()), { name: 'Lisbon' }, context);
 
-      expect(result).toEqual({ content: [{ type: 'text', text: formatPlaces('Lisbon', [lisbon]) }] });
+      expect(result).toEqual({ text: formatPlaces('Lisbon', [lisbon]), isError: false });
     });
   });
 
@@ -49,29 +52,28 @@ describe('weather.tool', () => {
         }
       });
 
-      const result = await getForecastTool(weather).handler({ latitude: 38.72, longitude: -9.13, days: 2 }, {});
+      const result = await runTool(getForecastTool(weather), { latitude: 38.72, longitude: -9.13, days: 2 }, context);
 
       expect(asked).toEqual([[38.72, -9.13, 2]]);
-      expect(result.content).toEqual([{ type: 'text', text: formatForecast(forecast) }]);
+      expect(result).toEqual({ text: formatForecast(forecast), isError: false });
     });
 
-    it("turns Open-Meteo's refusal into a tool error Claude can explain", async () => {
+    it("turns Open-Meteo's refusal into a tool error the model can explain", async () => {
       const weather = fakeWeather({
         forecast: () => Promise.reject(new OpenMeteoError('Open-Meteo forecast refused the request: limit exceeded'))
       });
 
-      const result = await getForecastTool(weather).handler({ latitude: 38.72, longitude: -9.13, days: 2 }, {});
+      const result = await runTool(getForecastTool(weather), { latitude: 38.72, longitude: -9.13, days: 2 }, context);
 
-      expect(result).toEqual({
-        content: [{ type: 'text', text: 'Open-Meteo forecast refused the request: limit exceeded' }],
-        isError: true
-      });
+      expect(result).toEqual({ text: 'Open-Meteo forecast refused the request: limit exceeded', isError: true });
     });
 
     it('lets any other error through', async () => {
       const weather = fakeWeather({ forecast: () => Promise.reject(new TypeError('fetch failed')) });
 
-      await expect(getForecastTool(weather).handler({ latitude: 38.72, longitude: -9.13, days: 2 }, {})).rejects.toThrow('fetch failed');
+      await expect(runTool(getForecastTool(weather), { latitude: 38.72, longitude: -9.13, days: 2 }, context)).rejects.toThrow(
+        'fetch failed'
+      );
     });
   });
 });

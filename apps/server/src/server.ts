@@ -1,15 +1,16 @@
 import { tripPlannerAgent } from './agents/trip-planner/trip-planner.agent.ts';
 import { weatherAgent } from './agents/weather/weather.agent.ts';
 import { createApp } from './app.ts';
-import { readPort } from './helpers/config.helper.ts';
+import { readPort, readRunner } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
 
 const port = readPort(process.env);
 const baseUrl = `http://localhost:${String(port)}`;
 
 // The trip planner reaches the weather agent the way any A2A client would: at its URL, over HTTP.
-const weather = weatherAgent({ baseUrl });
-const agents = [weather, tripPlannerAgent({ baseUrl, weatherAgentUrl: weather.url })];
+const weather = weatherAgent({ baseUrl, runner: readRunner(process.env, 'WEATHER_AGENT') });
+const tripPlanner = tripPlannerAgent({ baseUrl, runner: readRunner(process.env, 'TRIP_PLANNER'), weatherAgentUrl: weather.url });
+const agents = [weather, tripPlanner];
 
 const server = createApp({ agents }).listen(port, (error) => {
   if (error) {

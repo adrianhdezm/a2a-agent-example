@@ -1,5 +1,5 @@
 /**
- * The SDK session (a Claude session, a Codex thread) of each A2A context, kept in memory: the agent's only state besides the SDK's task store. A
+ * The SDK session (a Claude session, a Codex thread, a Pi transcript) of each A2A context, kept in memory: the agent's only state besides the SDK's task store. A
  * store that outlives a restart replaces it behind the same `get` and `set`.
  */
 export class SessionStore {

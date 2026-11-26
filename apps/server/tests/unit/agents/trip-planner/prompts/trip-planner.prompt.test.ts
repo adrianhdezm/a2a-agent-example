@@ -6,10 +6,7 @@ describe('trip-planner.prompt', () => {
     expect(tripPlannerInstructions(new Date('2026-11-24T10:00:00Z'))).toContain('Today is 2026-11-24 (UTC)');
   });
 
-  it('sends Codex to the Weather Agent for forecasts, through the consult outcome', () => {
-    const instructions = tripPlannerInstructions(new Date());
-
-    expect(instructions).toContain('Weather Agent');
-    expect(instructions).toMatch(/consult/);
+  it('sends the model to the Weather Agent for forecasts, through its tool', () => {
+    expect(tripPlannerInstructions(new Date())).toContain('call ask_weather_agent');
   });
 });

@@ -1,24 +1,23 @@
-import { createA2aAgent, runCodexTurn } from '../core/a2a-agent.ts';
-import type { A2aAgent, AgentCardBase, CodexFactory, CodexTurnSettings } from '../core/a2a-agent.ts';
-import { weatherAgentClient } from './clients/weather-agent.client.ts';
-import type { ConnectAgent } from './clients/weather-agent.client.ts';
+import { askAgentTool, createA2aAgent, resolveRunner } from '../core/a2a-agent.ts';
+import type { A2aAgent, AgentCardBase, AgentSpec, ConnectAgent, Runner, RunnerConfig } from '../core/a2a-agent.ts';
 import { tripPlannerInstructions } from './prompts/trip-planner.prompt.ts';
 
 /** What the trip planner needs from the server that runs it. */
 export interface TripPlannerAgentOptions {
   /** Where the server is reached, for the card's endpoint URL. */
   baseUrl: string;
-  /** The A2A URL of the weather agent it consults. */
+  /** The runner to run on, as configuration names it, or one a test hands in. */
+  runner: RunnerConfig | Runner;
+  /** The A2A URL of the weather agent it asks. */
   weatherAgentUrl: string;
-  /** The Codex SDK's `Codex` and the A2A SDK's client, unless a test hands in its own. */
-  codex?: CodexFactory;
+  /** The A2A SDK's client, unless a test hands in its own. */
   connect?: ConnectAgent;
 }
 
 const textModes = ['text/plain'];
 
-// Enough for a forecast or two, and an answer to the weather agent's question.
-const maxConsultations = 3;
+// Enough round trips for a forecast or two, an answer to the weather agent's question, and the answer.
+const maxSteps = 8;
 
 const tripPlannerCard: AgentCardBase = {
   name: 'Trip Planner',
@@ -50,21 +49,24 @@ const tripPlannerCard: AgentCardBase = {
 };
 
 /**
- * The trip planner, ready to serve: it runs on Codex, with no tools, and instructions dated per turn. It consults the
- * weather agent over A2A for forecasts, and answers in a `trip-plan` artifact.
+ * The trip planner, ready to serve on any runner: one tool, `ask_weather_agent`, which asks the weather agent over
+ * A2A, instructions dated per turn, and its answer in a `trip-plan` artifact.
  */
-export function tripPlannerAgent({ baseUrl, weatherAgentUrl, codex, connect }: TripPlannerAgentOptions): A2aAgent {
-  const settings: CodexTurnSettings = {
-    instructions: () => tripPlannerInstructions(new Date()),
-    consultant: weatherAgentClient(weatherAgentUrl, connect),
-    maxConsultations,
-    codex
-  };
+export function tripPlannerAgent({ baseUrl, runner, weatherAgentUrl, connect }: TripPlannerAgentOptions): A2aAgent {
+  const askWeather = askAgentTool({
+    name: 'ask_weather_agent',
+    agentName: 'Weather Agent',
+    knows: 'the weather now and for the next 7 days anywhere in the world',
+    url: weatherAgentUrl,
+    connect
+  });
+  const spec: AgentSpec = { instructions: tripPlannerInstructions, tools: [askWeather], maxSteps };
   return createA2aAgent(
     {
       id: 'trip-planner',
       card: tripPlannerCard,
-      runTurn: (request) => runCodexTurn(settings, request),
+      spec,
+      runner: resolveRunner(runner),
       answerArtifact: { name: 'trip-plan', description: "The trip planner's answer" }
     },
     baseUrl

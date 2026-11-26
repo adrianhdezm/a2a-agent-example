@@ -4,7 +4,7 @@ import type { AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/s
 import { answerArtifact, partsText, statusUpdate, submittedTask } from '../helpers/a2a-message.helper.ts';
 import type { AnswerArtifact, TaskRef } from '../helpers/a2a-message.helper.ts';
 import { logger } from '../../../logger.ts';
-import type { RunTurn } from '../models/turn.model.ts';
+import type { Runner, TurnAgent } from '../models/runner.model.ts';
 import type { SessionStore } from '../stores/session.store.ts';
 
 /** How a turn ended, as the task's final state and the text that goes with it. */
@@ -13,26 +13,32 @@ interface TurnEnd {
   text: string;
 }
 
-/** What a `TurnAgentExecutor` runs on: how it runs a turn, where it keeps sessions, and what it calls its answer. */
+/**
+ * What a `TurnAgentExecutor` runs on: the runner, the strategy that runs a turn on one agent SDK; the agent it runs;
+ * where it keeps sessions; and what it calls its answer.
+ */
 export interface TurnAgentOptions {
-  runTurn: RunTurn;
+  runner: Runner;
+  agent: TurnAgent;
   sessions: SessionStore;
   answerArtifact: AnswerArtifact;
 }
 
 /**
- * Any agent that answers in turns, behind A2A. Each message runs one turn in the session of its `contextId`, so a
+ * Any agent that answers in turns, behind A2A, on whichever runner it is given: it knows the `Runner` interface only. Each message runs one turn in the session of its `contextId`, so a
  * conversation keeps its history; the turn streams as `WORKING` updates and ends `COMPLETED` with the answer as an
  * artifact, `INPUT_REQUIRED` with the agent's question, `FAILED`, or `CANCELED`, as the turn's outcome says.
  */
 export class TurnAgentExecutor implements AgentExecutor {
-  readonly #runTurn: RunTurn;
+  readonly #runner: Runner;
+  readonly #agent: TurnAgent;
   readonly #sessions: SessionStore;
   readonly #answerArtifact: AnswerArtifact;
   readonly #running = new Map<string, AbortController>();
 
-  constructor({ runTurn, sessions, answerArtifact }: TurnAgentOptions) {
-    this.#runTurn = runTurn;
+  constructor({ runner, agent, sessions, answerArtifact }: TurnAgentOptions) {
+    this.#runner = runner;
+    this.#agent = agent;
     this.#sessions = sessions;
     this.#answerArtifact = answerArtifact;
   }
@@ -65,7 +71,7 @@ export class TurnAgentExecutor implements AgentExecutor {
 
   async #runOneTurn(taskRef: TaskRef, prompt: string, abortController: AbortController, eventBus: ExecutionEventBus): Promise<TurnEnd> {
     const sessionId = this.#sessions.get(taskRef.contextId);
-    const turn = this.#runTurn({ prompt, sessionId, abortController });
+    const turn = this.#runner.runTurn(this.#agent, { prompt, contextId: taskRef.contextId, sessionId, abortController });
     for await (const event of turn) {
       switch (event.type) {
         case 'session':

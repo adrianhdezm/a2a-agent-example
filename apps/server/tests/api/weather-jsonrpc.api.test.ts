@@ -49,7 +49,7 @@ describe('POST /agents/weather/a2a/jsonrpc', () => {
       name: 'forecast',
       parts: [{ content: { $case: 'text', value: 'Take an umbrella tomorrow.' } }]
     });
-    expect(app.turns[0]?.allowedTools).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
+    expect(app.turns[0]?.allowedTools).toEqual(['mcp__agent__find_city', 'mcp__agent__get_forecast']);
   });
 
   it('streams the task, the progress, the artifact and the final state', async () => {

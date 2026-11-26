@@ -1,3 +1,5 @@
+import { ToolError } from '../../core/a2a-agent.ts';
+
 /** A place the geocoding search found. */
 export interface Place {
   name: string;
@@ -43,7 +45,7 @@ export interface WeatherService {
 }
 
 /** Thrown when Open-Meteo is unreachable, refuses a request, or answers with something the client cannot read. */
-export class OpenMeteoError extends Error {
+export class OpenMeteoError extends ToolError {
   constructor(message: string) {
     super(message);
     this.name = 'OpenMeteoError';

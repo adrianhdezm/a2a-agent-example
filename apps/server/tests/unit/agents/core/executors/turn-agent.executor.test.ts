@@ -3,16 +3,21 @@ import type { AgentExecutionEvent } from '@a2a-js/sdk/server';
 import { describe, expect, it } from 'vitest';
 import type { TurnEvent, TurnRequest } from '../../../../../src/agents/core/models/turn.model.ts';
 import { TurnAgentExecutor } from '../../../../../src/agents/core/executors/turn-agent.executor.ts';
-import type { RunTurn } from '../../../../../src/agents/core/models/turn.model.ts';
+import type { Runner, TurnAgent } from '../../../../../src/agents/core/models/runner.model.ts';
 import { SessionStore } from '../../../../../src/agents/core/stores/session.store.ts';
 import { fakeEventBus } from '../../../../utils/fake-event-bus.ts';
 import { requestContext } from '../../../../utils/request-context-seed.ts';
 
 const taskRef = { taskId: 'task-1', contextId: 'context-1' };
 
-/** An executor that keeps its sessions in `sessions` and names its answer `forecast`. */
+type RunTurn = (request: TurnRequest) => AsyncIterable<TurnEvent>;
+
+const agent: TurnAgent = { instructions: () => 'You answer.', tools: [], maxSteps: 4, toolsUrl: () => 'http://unused' };
+
+/** An executor on a runner that runs every turn with `runTurn`, keeps its sessions in `sessions`, and names its answer `forecast`. */
 function executorFor(runTurn: RunTurn, sessions = new SessionStore()) {
-  return new TurnAgentExecutor({ runTurn, sessions, answerArtifact: { name: 'forecast', description: 'The answer' } });
+  const runner: Runner = { name: 'fake', runTurn: (_agent, request) => runTurn(request) };
+  return new TurnAgentExecutor({ runner, agent, sessions, answerArtifact: { name: 'forecast', description: 'The answer' } });
 }
 
 /** A turn runner that answers every turn with `events`, and records what it was asked. */
@@ -98,7 +103,7 @@ describe('TurnAgentExecutor', () => {
     expect(textOf(events.find((event) => event.kind === 'artifactUpdate'))).toBe('Done.');
   });
 
-  it('resumes the Claude session of the context for the next message', async () => {
+  it("resumes the runner's session of the context for the next message, and tells the runner the context", async () => {
     const { requests, runTurn } = fakeTurns([
       { type: 'session', sessionId: 'session-1' },
       { type: 'result', ok: true, outcome: 'input-required', text: 'Which Springfield?' }
@@ -109,10 +114,10 @@ describe('TurnAgentExecutor', () => {
     await executor.execute(requestContext('Illinois', taskRef), fakeEventBus().bus);
     await executor.execute(requestContext('Paris today?', { taskId: 'task-2', contextId: 'context-2' }), fakeEventBus().bus);
 
-    expect(requests.map(({ prompt, sessionId }) => [prompt, sessionId])).toEqual([
-      ['Springfield this weekend?', undefined],
-      ['Illinois', 'session-1'],
-      ['Paris today?', undefined]
+    expect(requests.map(({ prompt, contextId, sessionId }) => [prompt, contextId, sessionId])).toEqual([
+      ['Springfield this weekend?', 'context-1', undefined],
+      ['Illinois', 'context-1', 'session-1'],
+      ['Paris today?', 'context-2', undefined]
     ]);
   });
 

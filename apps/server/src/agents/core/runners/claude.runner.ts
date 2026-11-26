@@ -1,36 +1,27 @@
-import { query as sdkQuery } from '@anthropic-ai/claude-agent-sdk';
-import type { McpServerConfig, Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
-import type { TurnEvent, TurnOutcome, TurnRequest } from '../models/turn.model.ts';
+import { createSdkMcpServer, query as sdkQuery, tool } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, OutputFormat, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { answerJsonSchema, readAnswer, toolCallProgress } from '../helpers/answer.helper.ts';
+import { runTool } from '../helpers/tool.helper.ts';
+import type { Runner, ToolContext, TurnAgent } from '../models/runner.model.ts';
+import type { TurnEvent, TurnRequest } from '../models/turn.model.ts';
 
 /** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
 export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
 
 /**
- * What a Claude turn runs with: the agent's prompt and tools, and the SDK's `query()` unless a test hands in its own.
- * Claude's credentials are not among them: the SDK signs in the way Claude Code does, from the server's environment.
+ * What the Claude runner runs with: the model, or Claude Code's default, and the SDK's `query()` unless a test hands
+ * in its own. Claude's credentials are not among them: the SDK signs in the way Claude Code does.
  */
-export interface ClaudeTurnSettings {
-  /** The system prompt, built per turn so it can carry today's date. */
-  systemPrompt: () => string;
-  /** The in-process MCP servers with the agent's tools, and the tool names Claude may call without asking. */
-  mcpServers: Record<string, McpServerConfig>;
-  allowedTools: string[];
-  /** The most model round trips one turn may take. */
-  maxTurns: number;
+export interface ClaudeRunnerOptions {
+  model?: string;
   query?: ClaudeQuery;
 }
 
-// How every turn must end, enforced by the SDK: whether the question is answered, and the text the user reads.
-const answerSchema = z.object({
-  outcome: z
-    .enum(['completed', 'input-required'])
-    .describe('completed when you have answered the question; input-required when you need the user to tell you more first'),
-  text: z.string().describe('Your answer, or your question to the user, written for the user to read')
-}) satisfies z.ZodType<{ outcome: TurnOutcome; text: string }>;
+// The in-process MCP server the agent's tools are offered on; Claude sees them as `mcp__agent__<tool>`.
+const serverName = 'agent';
+const toolPrefix = `mcp__${serverName}__`;
 
-// The Claude Code CLI validates the schema as JSON Schema draft 7 and rejects zod's default, draft 2020-12.
-const answerFormat: OutputFormat = { type: 'json_schema', schema: z.toJSONSchema(answerSchema, { target: 'draft-7' }) };
+const answerFormat: OutputFormat = { type: 'json_schema', schema: answerJsonSchema() };
 
 // The SDK's own tool through which Claude delivers the answer in that format.
 const structuredOutputTool = 'StructuredOutput';
@@ -57,48 +48,60 @@ export function translateClaudeMessage(message: SDKMessage): TurnEvent[] {
       if (block.type !== 'tool_use' || block.name === structuredOutputTool) {
         return [];
       }
-      const tool = block.name.replace(/^mcp__[^_]+__/, '');
-      return [{ type: 'progress', text: `Calling ${tool} ${JSON.stringify(block.input)}` }];
+      return [toolCallProgress(block.name.replace(toolPrefix, ''), block.input)];
     });
   }
   if (message.type === 'result') {
-    if (message.subtype !== 'success') {
-      return [{ type: 'result', ok: false, error: message.errors.join('\n') || message.subtype }];
-    }
-    const answer = answerSchema.safeParse(message.structured_output);
-    return answer.success
-      ? [{ type: 'result', ok: true, ...answer.data }]
-      : [{ type: 'result', ok: false, error: 'the answer did not match its output format' }];
+    return message.subtype === 'success'
+      ? [readAnswer(message.structured_output)]
+      : [{ type: 'result', ok: false, error: message.errors.join('\n') || message.subtype }];
   }
   return [];
 }
 
+/** The agent's tools on an in-process MCP server, each told the turn's context when it runs. */
+function toolServer(agent: TurnAgent, context: ToolContext) {
+  const tools = agent.tools.map((agentTool) =>
+    tool(agentTool.name, agentTool.description, agentTool.input.shape, async (input) => {
+      const result = await runTool(agentTool, input, context);
+      return { content: [{ type: 'text' as const, text: result.text }], ...(result.isError ? { isError: true } : {}) };
+    })
+  );
+  return createSdkMcpServer({ name: serverName, version: '0.1.0', tools });
+}
+
 /**
  * The SDK options for one turn: the agent's own tools only, no built-in ones, none of the machine's settings, and an
- * answer in the structured format above.
+ * answer in the structured format.
  */
-export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest): Options {
+export function claudeOptions(agent: TurnAgent, request: TurnRequest, model?: string): Options {
+  const context = { contextId: request.contextId, signal: request.abortController.signal };
   return {
-    systemPrompt: settings.systemPrompt(),
+    ...(model === undefined ? {} : { model }),
+    systemPrompt: agent.instructions(new Date()),
     resume: request.sessionId,
     abortController: request.abortController,
-    mcpServers: settings.mcpServers,
+    mcpServers: agent.tools.length === 0 ? {} : { [serverName]: toolServer(agent, context) },
     // No built-in tools (files, shell, web): the agent works only through its own.
     tools: [],
-    allowedTools: settings.allowedTools,
+    allowedTools: agent.tools.map(({ name }) => `${toolPrefix}${name}`),
     // An agent served to others must not pick up the CLAUDE.md files or settings of whatever machine runs it.
     settingSources: [],
-    maxTurns: settings.maxTurns,
+    maxTurns: agent.maxSteps,
     outputFormat: answerFormat
   };
 }
 
-/** Runs one Claude turn and yields what it reports; aborting the request's controller stops it. */
-export async function* runClaudeTurn(settings: ClaudeTurnSettings, request: TurnRequest): AsyncIterable<TurnEvent> {
-  const options = claudeOptions(settings, request);
-  const query = settings.query ?? sdkQuery;
-  const messages = query({ prompt: request.prompt, options });
-  for await (const message of messages) {
-    yield* translateClaudeMessage(message);
-  }
+/** The Claude Agent SDK as a runner: one `query()` per turn, its tools in this process. */
+export function claudeRunner({ model, query = sdkQuery }: ClaudeRunnerOptions = {}): Runner {
+  return {
+    name: 'claude',
+    async *runTurn(agent, request) {
+      const options = claudeOptions(agent, request, model);
+      const messages = query({ prompt: request.prompt, options });
+      for await (const message of messages) {
+        yield* translateClaudeMessage(message);
+      }
+    }
+  };
 }
