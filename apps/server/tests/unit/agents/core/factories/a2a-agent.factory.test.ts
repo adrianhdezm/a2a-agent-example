@@ -1,6 +1,6 @@
-import type { AgentCard } from '@a2a-js/sdk';
 import { describe, expect, it } from 'vitest';
 import { createA2aAgent } from '../../../../../src/agents/core/factories/a2a-agent.factory.ts';
+import type { AgentProfile } from '../../../../../src/agents/core/models/a2a-agent.model.ts';
 import type { TurnEvent } from '../../../../../src/agents/core/models/turn.model.ts';
 
 // eslint-disable-next-line @typescript-eslint/require-await -- a turn that is never run
@@ -8,7 +8,7 @@ async function* runTurn(): AsyncIterable<TurnEvent> {
   yield* [];
 }
 
-const card = { name: 'Test Agent' } as Omit<AgentCard, 'supportedInterfaces'>;
+const card = { name: 'Test Agent' } as AgentProfile;
 const definition = { card, runTurn, answerArtifact: { name: 'answer', description: 'The answer' } };
 
 describe('createA2aAgent', () => {

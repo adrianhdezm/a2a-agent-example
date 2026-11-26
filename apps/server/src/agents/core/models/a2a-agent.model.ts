@@ -3,10 +3,15 @@ import type { DefaultRequestHandler } from '@a2a-js/sdk/server';
 import type { AnswerArtifact } from '../helpers/a2a-message.helper.ts';
 import type { RunTurn } from './turn.model.ts';
 
-/** What one agent supplies to be served over A2A: its card, how it runs a turn, and what it calls its answer. */
+/**
+ * An agent's card as the agent writes it: what the agent is (its name, skills and capabilities), without where it is
+ * served, which the factory adds when it serves it.
+ */
+export type AgentProfile = Omit<AgentCard, 'supportedInterfaces'>;
+
+/** What one agent supplies to be served over A2A: its profile, how it runs a turn, and what it calls its answer. */
 export interface AgentDefinition {
-  /** What the agent is: its name, skills and capabilities. Where it is served is added when it is served. */
-  card: Omit<AgentCard, 'supportedInterfaces'>;
+  card: AgentProfile;
   runTurn: RunTurn;
   answerArtifact: AnswerArtifact;
 }
