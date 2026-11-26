@@ -90,7 +90,6 @@ export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest
     settingSources: [],
     maxTurns: settings.maxTurns,
     outputFormat: answerFormat
-    // No env: Claude Code inherits the server's environment, and signs in from it as it would on its own.
   };
 }
 
