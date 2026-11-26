@@ -1,7 +1,7 @@
 {
   "name": "@a2a-agent-example/server",
   "version": "0.0.0",
-  "description": "The weather agent: the Claude Agent SDK behind an A2A 1.0 endpoint.",
+  "description": "The agents: a weather agent on the Claude Agent SDK and a trip planner on the Codex SDK, behind A2A 1.0 endpoints.",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,6 +31,7 @@
   "dependencies": {
     "@a2a-js/sdk": "catalog:",
     "@anthropic-ai/claude-agent-sdk": "^0.3.331",
+    "@openai/codex-sdk": "^0.172.0",
     "cors": "^2.8.6",
     "express": "^5.3.0",
     "http-errors": "^2.0.1",

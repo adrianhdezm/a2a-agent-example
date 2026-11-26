@@ -1,6 +1,6 @@
 import { createInterface } from 'node:readline/promises';
 import { ClientFactory } from '@a2a-js/sdk/client';
-import { parseCliArgs, usage } from './args.ts';
+import { cardBaseUrl, parseCliArgs, usage } from './args.ts';
 import type { CliOptions } from './args.ts';
 import { renderCard } from './card.ts';
 import { runCommand } from './commands.ts';
@@ -24,13 +24,14 @@ if (options.help) {
   process.exit(0);
 }
 
-// Without a url, the agent this repository runs, on the PORT in .env, which must then be set: there is no fallback.
+// Without a url, the trip planner this repository runs, on the PORT in .env, which must then be set: there is no
+// fallback. The trip planner is the one to talk to: it asks the weather agent itself.
 const port = process.env.PORT;
 if (options.url === undefined && (port === undefined || port === '')) {
   throw new Error('PORT is not set: set it in .env (see .env.example), or pass the agent URL as the first argument');
 }
-const url = options.url ?? `http://localhost:${String(port)}`;
-const client = await new ClientFactory().createFromUrl(url, options.cardPath);
+const url = options.url ?? `http://localhost:${String(port)}/agents/trip-planner/`;
+const client = await new ClientFactory().createFromUrl(cardBaseUrl(url, options.cardPath), options.cardPath);
 const card = await client.getAgentCard();
 console.log(`${renderCard(card, style)}\n`);
 console.log(style('dim', 'Type a question, or /help for the commands.\n'));

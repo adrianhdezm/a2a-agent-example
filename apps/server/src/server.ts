@@ -1,3 +1,4 @@
+import { tripPlannerAgent } from './agents/trip-planner/trip-planner.agent.ts';
 import { weatherAgent } from './agents/weather/weather.agent.ts';
 import { createApp } from './app.ts';
 import { readPort } from './helpers/config.helper.ts';
@@ -6,13 +7,17 @@ import { logger } from './logger.ts';
 const port = readPort(process.env);
 const baseUrl = `http://localhost:${String(port)}`;
 
-const agent = weatherAgent({ baseUrl });
+// The trip planner reaches the weather agent the way any A2A client would: at its URL, over HTTP.
+const weather = weatherAgent({ baseUrl });
+const agents = [weather, tripPlannerAgent({ baseUrl, weatherAgentUrl: weather.url })];
 
-const server = createApp({ agent }).listen(port, (error) => {
+const server = createApp({ agents }).listen(port, (error) => {
   if (error) {
     throw error;
   }
-  logger.info({ baseUrl, card: `${baseUrl}${agent.paths.card}` }, `${agent.card.name} listening`);
+  for (const agent of agents) {
+    logger.info({ url: agent.url }, `${agent.card.name} listening`);
+  }
 });
 
 // Stop taking requests, let the open ones (running turns among them) finish, then exit.

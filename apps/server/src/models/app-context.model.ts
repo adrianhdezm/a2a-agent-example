@@ -8,5 +8,6 @@ export interface MountedAgent {
 
 /** What the app's handlers use, built once by `server.ts` and stored on `app.locals.context`. */
 export interface AppContext {
-  agent: MountedAgent;
+  /** The agents the app serves, each at its own paths. */
+  agents: MountedAgent[];
 }

@@ -62,6 +62,7 @@ export function weatherAgent({ baseUrl, query, fetchUrl }: WeatherAgentOptions):
   };
   return createA2aAgent(
     {
+      id: 'weather',
       card: weatherCard,
       runTurn: (request) => runClaudeTurn(claude, request),
       answerArtifact: { name: 'forecast', description: "The weather agent's answer" }

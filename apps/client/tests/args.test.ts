@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCliArgs } from '../src/args.ts';
+import { cardBaseUrl, parseCliArgs } from '../src/args.ts';
 import { UsageError } from '../src/errors/usage-error.ts';
 
 describe('parseCliArgs', () => {
@@ -26,5 +26,16 @@ describe('parseCliArgs', () => {
     ['a flag missing its value', ['--card-path']]
   ])('throws a UsageError for %s', (_case, args) => {
     expect(() => parseCliArgs(args)).toThrow(UsageError);
+  });
+});
+
+describe('cardBaseUrl', () => {
+  it('ends the url with a slash, so the default card path resolves beneath it', () => {
+    expect(cardBaseUrl('http://localhost:41241/agents/weather', undefined)).toBe('http://localhost:41241/agents/weather/');
+    expect(cardBaseUrl('http://localhost:41241/agents/weather/', undefined)).toBe('http://localhost:41241/agents/weather/');
+  });
+
+  it('takes the url as it is when a card path is given', () => {
+    expect(cardBaseUrl('https://example.com/my-card.json', '')).toBe('https://example.com/my-card.json');
   });
 });
