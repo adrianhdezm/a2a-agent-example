@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { weatherAgent } from '../../../../src/agents/weather/weather.agent.ts';
 
 describe('weatherAgent', () => {
-  const agent = weatherAgent({ apiKey: 'test-key', baseUrl: 'http://localhost:41241' });
+  const agent = weatherAgent({ baseUrl: 'http://localhost:41241' });
 
   it('serves a card with one JSON-RPC interface under the base URL, streaming and no push notifications', () => {
     expect(agent.card.name).toBe('Weather Agent');

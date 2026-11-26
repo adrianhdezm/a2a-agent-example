@@ -8,7 +8,6 @@ import { answer, init, maxTurns, question, sessionId, success, toolCall, unreada
 function settings(messages: SDKMessage[] = []) {
   const calls: { prompt: string; options: Options }[] = [];
   const value: ClaudeTurnSettings = {
-    apiKey: 'test-key',
     systemPrompt: () => 'You are a weather assistant.',
     mcpServers: { weather: { type: 'stdio', command: 'unused' } satisfies McpServerConfig },
     allowedTools: ['mcp__weather__find_city'],
@@ -62,7 +61,7 @@ describe('claude.runner', () => {
   });
 
   describe('claudeOptions', () => {
-    it("gives Claude only the agent's tools, none of the machine's settings, and the session to resume", () => {
+    it("gives Claude only the agent's tools, none of the machine's settings, the session to resume, and the server's own environment", () => {
       const abortController = new AbortController();
 
       const options = claudeOptions(settings().value, { prompt: 'Lisbon tomorrow?', sessionId, abortController });
@@ -74,9 +73,9 @@ describe('claude.runner', () => {
         tools: [],
         allowedTools: ['mcp__weather__find_city'],
         settingSources: [],
-        maxTurns: 8,
-        env: { ANTHROPIC_API_KEY: 'test-key' }
+        maxTurns: 8
       });
+      expect(options.env).toBeUndefined();
     });
 
     it('asks for the answer as an outcome and a text, both required, in the JSON Schema draft the CLI reads', () => {

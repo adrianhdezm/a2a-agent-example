@@ -1,13 +1,12 @@
 import { weatherAgent } from './agents/weather/weather.agent.ts';
 import { createApp } from './app.ts';
-import { readPort, requireVariable } from './helpers/config.helper.ts';
+import { readPort } from './helpers/config.helper.ts';
 import { logger } from './logger.ts';
 
 const port = readPort(process.env);
-const apiKey = requireVariable(process.env, 'ANTHROPIC_API_KEY');
 const baseUrl = `http://localhost:${String(port)}`;
 
-const agent = weatherAgent({ apiKey, baseUrl });
+const agent = weatherAgent({ baseUrl });
 
 const server = createApp({ agent }).listen(port, (error) => {
   if (error) {

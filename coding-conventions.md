@@ -51,7 +51,7 @@ The apps never import each other: they meet only over A2A. Each keeps its own co
 | middleware | `middlewares/<name>.middleware.ts`             | `notFoundHandler` and `errorHandler`, which apply to every request                                | answer a route of their own                                |
 | context    | `models/app-context.model.ts` + `express.d.ts` | `AppContext`: the agent the app mounts, as its A2A request handler and the paths of its endpoints | —                                                          |
 | model      | `models/<name>.model.ts`                       | the app's types and errors: `app-context`, `config` (`ConfigError`)                               | contain logic beyond an error's message                    |
-| helper     | `helpers/<name>.helper.ts`                     | the app's transport-free functions: configuration (`requireVariable`, `readPort`)                 | take an Express `Request`                                  |
+| helper     | `helpers/<name>.helper.ts`                     | the app's transport-free functions: configuration (`readPort`)                                    | take an Express `Request`                                  |
 
 **The agents.** `agents/core/` holds what every agent shares; `agents/<name>/` holds one agent and the domain only it needs. Each has one entry point at its root, its public face; everything else is in blocks, named and placed as above (`agents/<part>/<block>/<name>.<block>.ts`), and stays inside:
 

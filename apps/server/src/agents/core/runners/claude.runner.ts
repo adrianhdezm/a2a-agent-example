@@ -6,9 +6,11 @@ import type { TurnEvent, TurnOutcome, TurnRequest } from '../models/turn.model.t
 /** The shape of the SDK's `query()` the turn uses, so tests can hand it recorded messages. */
 export type ClaudeQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
 
-/** What a Claude turn runs with: the agent's prompt and tools, the key, and the SDK's `query()` unless a test hands in its own. */
+/**
+ * What a Claude turn runs with: the agent's prompt and tools, and the SDK's `query()` unless a test hands in its own.
+ * Claude's credentials are not among them: the SDK signs in the way Claude Code does, from the server's environment.
+ */
 export interface ClaudeTurnSettings {
-  apiKey: string;
   /** The system prompt, built per turn so it can carry today's date. */
   systemPrompt: () => string;
   /** The in-process MCP servers with the agent's tools, and the tool names Claude may call without asking. */
@@ -87,9 +89,8 @@ export function claudeOptions(settings: ClaudeTurnSettings, request: TurnRequest
     // An agent served to others must not pick up the CLAUDE.md files or settings of whatever machine runs it.
     settingSources: [],
     maxTurns: settings.maxTurns,
-    outputFormat: answerFormat,
-    // The SDK replaces the child process's environment with this one, so it keeps the rest of ours (PATH, HOME).
-    env: { ...process.env, ANTHROPIC_API_KEY: settings.apiKey }
+    outputFormat: answerFormat
+    // No env: Claude Code inherits the server's environment, and signs in from it as it would on its own.
   };
 }
 

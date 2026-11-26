@@ -30,7 +30,6 @@ export async function serveTestApp(script: SDKMessage[][]): Promise<TestApp> {
     yield* script[Math.min(turns.length, script.length) - 1] ?? [];
   }
   const agent = weatherAgent({
-    apiKey: 'test-key',
     baseUrl: server.baseUrl,
     query,
     fetchUrl: () => Promise.reject(new Error('Open-Meteo is not reached in the API tests'))

@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readPort, requireVariable } from '../../../src/helpers/config.helper.ts';
+import { readPort } from '../../../src/helpers/config.helper.ts';
 import { ConfigError } from '../../../src/models/config.model.ts';
 
 describe('config.helper', () => {
-  it('reads a variable that is set', () => {
-    expect(requireVariable({ ANTHROPIC_API_KEY: 'sk-ant-test' }, 'ANTHROPIC_API_KEY')).toBe('sk-ant-test');
-  });
-
-  it.each([undefined, ''])('throws a ConfigError naming a variable set to %j', (value) => {
-    expect(() => requireVariable({ ANTHROPIC_API_KEY: value }, 'ANTHROPIC_API_KEY')).toThrow(
-      expect.objectContaining({ name: 'ConfigError', variable: 'ANTHROPIC_API_KEY' })
-    );
+  it.each([undefined, ''])('throws a ConfigError naming PORT when it is set to %j', (value) => {
+    expect(() => readPort({ PORT: value })).toThrow(expect.objectContaining({ name: 'ConfigError', variable: 'PORT' }));
   });
 
   it('reads the port as a number', () => {

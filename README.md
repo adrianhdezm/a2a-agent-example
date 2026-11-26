@@ -2,7 +2,7 @@
 
 A weather agent built on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview), served over [A2A 1.0](https://a2a-protocol.org/v1.0.0/specification/) with [`@a2a-js/sdk`](https://github.com/a2aproject/a2a-js), and an interactive command line to talk to it.
 
-It follows the shape of the a2a-js [`movie-agent`](https://github.com/a2aproject/a2a-js/tree/main/src/samples/agents/movie-agent) and [`cli.ts`](https://github.com/a2aproject/a2a-js/blob/main/src/samples/cli.ts) samples, with the Claude Agent SDK in place of Genkit and [Open-Meteo](https://open-meteo.com) in place of TMDB. Open-Meteo needs no API key, so the only key is Anthropic's.
+It follows the shape of the a2a-js [`movie-agent`](https://github.com/a2aproject/a2a-js/tree/main/src/samples/agents/movie-agent) and [`cli.ts`](https://github.com/a2aproject/a2a-js/blob/main/src/samples/cli.ts) samples, with the Claude Agent SDK in place of Genkit and [Open-Meteo](https://open-meteo.com) in place of TMDB. Open-Meteo needs no API key, and Claude signs in the way Claude Code does, so the agent needs no key of its own.
 
 What it shows of A2A:
 
@@ -24,7 +24,7 @@ pnpm install
 cp .env.example .env
 ```
 
-Put your Anthropic API key in `.env` as `ANTHROPIC_API_KEY`, then start the agent:
+The agent runs Claude through the Claude Agent SDK, which signs in the way Claude Code does on this machine: if Claude Code works here, so does the agent. If it has no credentials here, put an API key in `.env` as `ANTHROPIC_API_KEY`. Then start the agent:
 
 ```bash
 pnpm dev
@@ -89,7 +89,7 @@ A pnpm workspace. The two apps meet only over A2A and never import each other.
 
 ```text
 apps/server/src          the server: an Express app, and the agents it serves
-  server.ts              composition root: configuration, weatherAgent({ apiKey, baseUrl }), the listener
+  server.ts              composition root: configuration, weatherAgent({ baseUrl }), the listener
   app.ts                 createApp(context): logging, /health, the A2A card and JSON-RPC endpoint, 404 and errors
   controllers/           health.controller.ts
   middlewares/           not-found and error handlers
@@ -137,4 +137,4 @@ pnpm test:integration
 - **Open-Meteo's free API is rate-limited per IP.** When it refuses a request, the agent says so instead of guessing; try again later, or see Open-Meteo's terms for heavier use.
 - **Behind an HTTPS proxy**, start the agent with `NODE_USE_ENV_PROXY=1`, since Node's built-in `fetch` does not read `HTTPS_PROXY` otherwise.
 - **Everything is in memory**: tasks and the `contextId` to Claude session map are lost when the agent restarts.
-- **No authentication**: anyone who can reach the agent can use your Anthropic key through it. Keep it on localhost.
+- **No authentication**: anyone who can reach the agent runs Claude on your credentials through it. Keep it on localhost.

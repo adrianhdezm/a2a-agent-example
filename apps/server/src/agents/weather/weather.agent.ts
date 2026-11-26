@@ -7,8 +7,6 @@ import { weatherMcpServer, weatherServerName, weatherToolNames } from './tools/w
 
 /** What the weather agent needs from the server that runs it. */
 export interface WeatherAgentOptions {
-  /** The Anthropic API key Claude runs with. */
-  apiKey: string;
   /** Where the server is reached, for the card's endpoint URL. */
   baseUrl: string;
   /** The Claude Agent SDK's `query()` and the global `fetch`, unless a test hands in its own. */
@@ -54,9 +52,8 @@ const weatherCard: AgentCardBase = {
  * The weather agent, ready to serve: it runs on Claude with the `find_city` and `get_forecast` tools over Open-Meteo,
  * a prompt dated per turn, and answers in a `forecast` artifact.
  */
-export function weatherAgent({ apiKey, baseUrl, query, fetchUrl }: WeatherAgentOptions): A2aAgent {
+export function weatherAgent({ baseUrl, query, fetchUrl }: WeatherAgentOptions): A2aAgent {
   const claude: ClaudeTurnSettings = {
-    apiKey,
     systemPrompt: () => weatherInstructions(new Date()),
     mcpServers: { [weatherServerName]: weatherMcpServer(openMeteoClient(fetchUrl)) },
     allowedTools: weatherToolNames,
