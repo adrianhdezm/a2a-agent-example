@@ -24,9 +24,9 @@ describe('config.helper', () => {
 
     it('reads the runner, and the model when one is set', () => {
       expect(readRunner({ WEATHER_AGENT_RUNNER: 'codex', WEATHER_AGENT_MODEL: '' }, 'WEATHER_AGENT')).toEqual({ name: 'codex' });
-      expect(readRunner({ TRIP_PLANNER_RUNNER: 'pi', TRIP_PLANNER_MODEL: 'anthropic/claude-sonnet-4-6' }, 'TRIP_PLANNER')).toEqual({
-        name: 'pi',
-        model: 'anthropic/claude-sonnet-4-6'
+      expect(readRunner({ TRIP_PLANNER_RUNNER: 'claude', TRIP_PLANNER_MODEL: 'claude-sonnet-4-6' }, 'TRIP_PLANNER')).toEqual({
+        name: 'claude',
+        model: 'claude-sonnet-4-6'
       });
     });
   });

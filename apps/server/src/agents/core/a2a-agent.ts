@@ -7,7 +7,6 @@ import type { A2aAgent, AgentDefinition } from './models/a2a-agent.model.ts';
 import type { Runner, RunnerConfig } from './models/runner.model.ts';
 import { claudeRunner } from './runners/claude.runner.ts';
 import { codexRunner } from './runners/codex.runner.ts';
-import { piRunner } from './runners/pi.runner.ts';
 import { SessionStore } from './stores/session.store.ts';
 
 // core's entry point: what an agent needs from core, and nothing else. Everything below it is core's own.
@@ -17,20 +16,13 @@ export { ToolError } from './models/runner.model.ts';
 export { defineTool } from './helpers/tool.helper.ts';
 export { claudeRunner } from './runners/claude.runner.ts';
 export { codexRunner } from './runners/codex.runner.ts';
-export { piRunner } from './runners/pi.runner.ts';
 export { askAgentTool } from './tools/ask-agent.tool.ts';
 export type { ConnectAgent } from './tools/ask-agent.tool.ts';
 
 /** The runners configuration can name, each from its config: the strategies an agent can be run with. */
 const runnersByName: Record<string, (config: RunnerConfig) => Runner> = {
   claude: ({ model }) => claudeRunner({ model }),
-  codex: ({ model }) => codexRunner({ model }),
-  pi: ({ model }) => {
-    if (model === undefined) {
-      throw new Error('The pi runner needs a model, as provider/model, such as anthropic/claude-sonnet-4-6');
-    }
-    return piRunner({ model });
-  }
+  codex: ({ model }) => codexRunner({ model })
 };
 
 /** The runner configuration names, or the runner itself when a test hands one in. */

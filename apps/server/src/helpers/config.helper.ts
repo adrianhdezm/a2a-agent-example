@@ -23,7 +23,7 @@ export function readPort(env: Environment): number {
 export function readRunner(env: Environment, prefix: string): RunnerChoice {
   const name = env[`${prefix}_RUNNER`];
   if (name === undefined || name === '') {
-    throw new ConfigError(`${prefix}_RUNNER`, 'is not set: claude, codex or pi');
+    throw new ConfigError(`${prefix}_RUNNER`, 'is not set: claude or codex');
   }
   const model = env[`${prefix}_MODEL`];
   return model === undefined || model === '' ? { name } : { name, model };

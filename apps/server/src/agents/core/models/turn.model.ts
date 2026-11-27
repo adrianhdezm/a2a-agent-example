@@ -3,7 +3,7 @@ export type TurnOutcome = 'completed' | 'input-required';
 
 /** What one agent turn reports, the same whichever runner runs it, reduced to what the A2A side needs. */
 export type TurnEvent =
-  /** The SDK session the turn runs in (a Claude session, a Codex thread, a Pi transcript); the next turn resumes it. */
+  /** The SDK session the turn runs in (a Claude session, a Codex thread); the next turn resumes it. */
   | { type: 'session'; sessionId: string }
   /** Something the agent is doing on the way to its answer: its text before a tool call, or the call itself. */
   | { type: 'progress'; text: string }

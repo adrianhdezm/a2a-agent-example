@@ -49,19 +49,11 @@ describe('resolveRunner', () => {
     expect(resolveRunner({ name }).name).toBe(name);
   });
 
-  it('makes the pi runner from its name and model', () => {
-    expect(resolveRunner({ name: 'pi', model: 'anthropic/claude-sonnet-4-6' }).name).toBe('pi');
-  });
-
   it('hands back a runner it is given', () => {
     expect(resolveRunner(runner)).toBe(runner);
   });
 
   it('refuses a runner it does not know, naming the ones it does', () => {
-    expect(() => resolveRunner({ name: 'gpt' })).toThrow('Unknown runner "gpt": use claude, codex, pi');
-  });
-
-  it('refuses the pi runner without a model', () => {
-    expect(() => resolveRunner({ name: 'pi' })).toThrow(/needs a model/);
+    expect(() => resolveRunner({ name: 'gpt' })).toThrow('Unknown runner "gpt": use claude, codex');
   });
 });

@@ -56,7 +56,7 @@ export interface Runner {
   runTurn: (agent: TurnAgent, request: TurnRequest) => AsyncIterable<TurnEvent>;
 }
 
-/** A runner as configuration names it: `claude`, `codex` or `pi`, and the model, which Pi needs and the others may take. */
+/** A runner as configuration names it, `claude` or `codex`, and the model, or the SDK's default when it is left out. */
 export interface RunnerConfig {
   name: string;
   model?: string;

@@ -1,10 +1,9 @@
 import { Role, TaskState } from '@a2a-js/sdk';
 import type { SendMessageRequest, Task } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
-import { fauxAssistantMessage, fauxToolCall } from '@mariozechner/pi-ai';
-import type { AssistantMessage, Context } from '@mariozechner/pi-ai';
 import { afterEach, describe, expect, it } from 'vitest';
 import { forecastCall, init, sessionId, structuredResult } from '../fixtures/claude-messages.ts';
+import type { CodexStep } from '../utils/fake-codex.ts';
 import { serveTestApp } from '../utils/test-app.ts';
 import type { TestApp } from '../utils/test-app.ts';
 
@@ -12,19 +11,13 @@ import type { TestApp } from '../utils/test-app.ts';
 const forecast = [init, forecastCall, structuredResult({ outcome: 'completed', text: 'Sunny, 18 to 24 °C.' })];
 const whichSpringfield = [init, structuredResult({ outcome: 'input-required', text: 'Which Springfield?' })];
 
-// The trip planner's model calls, on Pi: asking the weather agent, and answering.
-function askWeather(question: string): AssistantMessage {
-  return fauxAssistantMessage(fauxToolCall('ask_weather_agent', { question }), { stopReason: 'toolUse' });
+// The trip planner's Codex runs: asking the weather agent through its tool, and answering.
+function askWeather(question: string): CodexStep {
+  return { call: 'ask_weather_agent', arguments: { question } };
 }
 
-function answer(outcome: 'completed' | 'input-required', text: string): AssistantMessage {
-  return fauxAssistantMessage(fauxToolCall('answer', { outcome, text }), { stopReason: 'toolUse' });
-}
-
-/** What the last tool call of a model call's context gave back. */
-function lastToolResult(context: Context | undefined): string {
-  const last = context?.messages.at(-1);
-  return last?.role === 'toolResult' && last.content[0]?.type === 'text' ? last.content[0].text : '';
+function answer(outcome: 'completed' | 'input-required', text: string): CodexStep {
+  return { answer: { outcome, text } };
 }
 
 function message(text: string, taskRef: { contextId?: string; taskId?: string } = {}): SendMessageRequest {
@@ -57,18 +50,19 @@ describe('POST /agents/trip-planner/a2a/jsonrpc', () => {
   });
 
   it('asks the weather agent over A2A through its tool, then answers in a trip-plan artifact', async () => {
-    app = await serveTestApp([forecast], [askWeather('Lisbon this weekend?'), answer('completed', 'Pack sunscreen and a light jacket.')]);
+    app = await serveTestApp([forecast], [[askWeather('Lisbon this weekend?'), answer('completed', 'Pack sunscreen and a light jacket.')]]);
 
     const task = (await (await clientFor(app)).sendMessage(message('What should I pack for Lisbon this weekend?'))) as Task;
 
     expect(task.status?.state).toBe(TaskState.TASK_STATE_COMPLETED);
     expect(task.artifacts[0]).toMatchObject({ name: 'trip-plan', parts: [{ content: { value: 'Pack sunscreen and a light jacket.' } }] });
     expect(app.turns.map(({ prompt }) => prompt)).toEqual(['Lisbon this weekend?']);
-    expect(lastToolResult(app.tripCalls[1])).toBe('Sunny, 18 to 24 °C.');
+    expect(app.codexRuns[0]?.toolResults).toEqual(['Sunny, 18 to 24 °C.']);
+    expect(app.codexRuns[0]?.toolsUrl).toBe(`${app.baseUrl}/agents/trip-planner/mcp/${encodeURIComponent(task.contextId)}`);
   });
 
   it('streams its call to the weather agent as progress', async () => {
-    app = await serveTestApp([forecast], [askWeather('Lisbon this weekend?'), answer('completed', 'Pack light.')]);
+    app = await serveTestApp([forecast], [[askWeather('Lisbon this weekend?'), answer('completed', 'Pack light.')]]);
     const progress: string[] = [];
 
     for await (const event of (await clientFor(app)).sendMessageStream(message('Packing for Lisbon?'))) {
@@ -86,10 +80,8 @@ describe('POST /agents/trip-planner/a2a/jsonrpc', () => {
     app = await serveTestApp(
       [whichSpringfield, forecast],
       [
-        askWeather('Springfield on Monday?'),
-        answer('input-required', 'Which Springfield are you going to?'),
-        askWeather('Springfield, Illinois'),
-        answer('completed', 'Pack a warm coat.')
+        [askWeather('Springfield on Monday?'), answer('input-required', 'Which Springfield are you going to?')],
+        [askWeather('Springfield, Illinois'), answer('completed', 'Pack a warm coat.')]
       ]
     );
     const client = await clientFor(app);
@@ -103,11 +95,14 @@ describe('POST /agents/trip-planner/a2a/jsonrpc', () => {
       state: TaskState.TASK_STATE_INPUT_REQUIRED,
       message: { parts: [{ content: { value: 'Which Springfield are you going to?' } }] }
     });
-    expect(lastToolResult(app.tripCalls[1])).toMatch(/^The Weather Agent asks: Which Springfield\?/);
+    expect(app.codexRuns[0]?.toolResults[0]).toMatch(/^The Weather Agent asks: Which Springfield\?/);
     expect(answered).toMatchObject({ id: asked.id, status: { state: TaskState.TASK_STATE_COMPLETED } });
-    // The trip planner's second turn carried on its Pi transcript, and the weather agent got the answer in the task
-    // it asked in, so its Claude session resumed.
-    expect(app.tripCalls[2]?.messages.length).toBeGreaterThan(4);
+    // The trip planner's second turn resumed its Codex thread, and the weather agent got the answer in the task it
+    // asked in, so its Claude session resumed.
+    expect(app.codexRuns.map(({ input, resumed }) => [input, resumed])).toEqual([
+      ["I'm in Springfield on Monday, what do I wear?", undefined],
+      ['Illinois', 'thread-1']
+    ]);
     expect(app.turns.map(({ prompt, sessionId: resumed }) => [prompt, resumed])).toEqual([
       ['Springfield on Monday?', undefined],
       ['Springfield, Illinois', sessionId]
