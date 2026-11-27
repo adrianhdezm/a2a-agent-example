@@ -1,5 +1,5 @@
-import { createA2aAgent, resolveRunner } from '../core/a2a-agent.ts';
-import type { A2aAgent, AgentCardBase, AgentSpec, Runner, RunnerConfig } from '../core/a2a-agent.ts';
+import { claudeRunner, createA2aAgent } from '../core/a2a-agent.ts';
+import type { A2aAgent, AgentCardBase, AgentSpec, Runner } from '../core/a2a-agent.ts';
 import { openMeteoClient } from './clients/open-meteo.client.ts';
 import type { Fetch } from './clients/open-meteo.client.ts';
 import { weatherInstructions } from './prompts/weather.prompt.ts';
@@ -9,9 +9,8 @@ import { weatherTools } from './tools/weather.tool.ts';
 export interface WeatherAgentOptions {
   /** Where the server is reached, for the card's endpoint URL. */
   baseUrl: string;
-  /** The runner to run on, as configuration names it, or one a test hands in. */
-  runner: RunnerConfig | Runner;
-  /** The global `fetch`, unless a test hands in its own. */
+  /** The runner on a fake SDK, and the global `fetch`, unless a test hands in its own. */
+  runner?: Runner;
   fetchUrl?: Fetch;
 }
 
@@ -50,17 +49,17 @@ const weatherCard: AgentCardBase = {
 };
 
 /**
- * The weather agent, ready to serve on any runner: the `find_city` and `get_forecast` tools over Open-Meteo, a prompt
- * dated per turn, and its answer in a `forecast` artifact.
+ * The weather agent, ready to serve: it runs on Claude, with the `find_city` and `get_forecast` tools over Open-Meteo,
+ * a prompt dated per turn, and its answer in a `forecast` artifact.
  */
-export function weatherAgent({ baseUrl, runner, fetchUrl }: WeatherAgentOptions): A2aAgent {
+export function weatherAgent({ baseUrl, runner = claudeRunner(), fetchUrl }: WeatherAgentOptions): A2aAgent {
   const spec: AgentSpec = { instructions: weatherInstructions, tools: weatherTools(openMeteoClient(fetchUrl)), maxSteps };
   return createA2aAgent(
     {
       id: 'weather',
       card: weatherCard,
       spec,
-      runner: resolveRunner(runner),
+      runner,
       answerArtifact: { name: 'forecast', description: "The weather agent's answer" }
     },
     baseUrl

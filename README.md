@@ -5,7 +5,7 @@ Two agents served over [A2A 1.0](https://a2a-protocol.org/v1.0.0/specification/)
 - a **weather agent**, with two tools over [Open-Meteo](https://open-meteo.com);
 - a **trip planner**, with one tool that asks the weather agent over A2A, as any A2A client would.
 
-Each agent runs on a **runner**, picked in `.env`: the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) or the [Codex SDK](https://github.com/openai/codex/tree/main/sdk/typescript). The runners are strategies of one interface: an agent is defined once (instructions, tools, a step limit), either runner runs it, and both report a turn as the same events, so the A2A side does not know which SDK answers. One contract test suite runs against both to keep it so.
+Each agent runs on a **runner**, named in its code: the weather agent on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview), the trip planner on the [Codex SDK](https://github.com/openai/codex/tree/main/sdk/typescript). The runners are strategies of one interface: an agent is defined once (instructions, tools, a step limit), either runner runs it, and both report a turn as the same events, so the A2A side does not know which SDK answers. Moving an agent to the other SDK is a one-line change in its entry point, and one contract test suite runs against both runners to keep that true.
 
 It follows the shape of the a2a-js [`movie-agent`](https://github.com/a2aproject/a2a-js/tree/main/src/samples/agents/movie-agent) and [`cli.ts`](https://github.com/a2aproject/a2a-js/blob/main/src/samples/cli.ts) samples, with agent SDKs in place of Genkit and Open-Meteo, which needs no API key, in place of TMDB.
 
@@ -30,12 +30,12 @@ pnpm install
 cp .env.example .env
 ```
 
-`.env` picks each agent's runner, `WEATHER_AGENT_RUNNER` and `TRIP_PLANNER_RUNNER`: `claude` or `codex`. `WEATHER_AGENT_MODEL` and `TRIP_PLANNER_MODEL` pick the model, and may stay unset for the SDK's own default. `.env.example` runs the weather agent on Claude and the trip planner on Codex. Each runner signs in its own way:
+Each agent names its runner in its entry point: `weatherAgent` runs on `claudeRunner()`, `tripPlannerAgent` on `codexRunner()`. To move an agent to the other SDK, change that one line; to pin a model, pass it, as in `codexRunner({ model: 'gpt-5.5' })`. Each runner signs in its own way:
 
-| Runner   | Signs in                                                                                                                       | Model                        |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| `claude` | the way Claude Code does on this machine; or `ANTHROPIC_API_KEY` in `.env`                                                     | optional: a Claude model id  |
-| `codex`  | the way the Codex CLI installed with the SDK does: `codex login` (`pnpm --filter server exec codex login`); or `CODEX_API_KEY` | optional: an OpenAI model id |
+| Runner   | Signs in                                                                                                                       | Model                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `claude` | the way Claude Code does on this machine; or `ANTHROPIC_API_KEY` in `.env`                                                     | optional: a Claude model id, as `claudeRunner({ model })` |
+| `codex`  | the way the Codex CLI installed with the SDK does: `codex login` (`pnpm --filter server exec codex login`); or `CODEX_API_KEY` | optional: an OpenAI model id, as `codexRunner({ model })` |
 
 Then start both agents:
 
@@ -148,14 +148,14 @@ A pnpm workspace. The two apps meet only over A2A and never import each other.
 
 ```text
 apps/server/src          the server: an Express app, and the agents it serves
-  server.ts              composition root: configuration, each agent on its runner, the listener
+  server.ts              composition root: configuration, the two agents, the listener
   app.ts                 createApp(context): logging, /health, each agent's A2A card, JSON-RPC endpoint and MCP tools, 404 and errors
   controllers/           health.controller.ts
   middlewares/           not-found and error handlers
   models/, helpers/      AppContext, configuration
   agents/
     core/                what every agent shares
-      a2a-agent.ts       its entry point: createA2aAgent and resolveRunner; and what agents may use from core
+      a2a-agent.ts       its entry point: createA2aAgent; and what agents may use from core, the two runners among it
       executors/         turn-agent.executor.ts: the A2A AgentExecutor, on any runner
       runners/           claude.runner.ts, codex.runner.ts: one turn on an agent SDK, as turn events
       handlers/          tools-mcp.handler.ts: an agent's tools over MCP, for the Codex runner
@@ -163,13 +163,13 @@ apps/server/src          the server: an Express app, and the agents it serves
       stores/            session.store.ts: the SDK session of each A2A context
       models/, helpers/  turn events, the Runner interface and AgentSpec, AgentTool, the answer format, A2A messages
     weather/             the weather agent
-      weather.agent.ts   its entry point: weatherAgent(options), its card, prompt, tools and forecast answer, on the runner it is given
+      weather.agent.ts   its entry point: weatherAgent(options), on claudeRunner(), with its card, prompt, tools and forecast answer
       clients/           open-meteo.client.ts
       tools/             weather.tool.ts: find_city and get_forecast
       prompts/           weather.prompt.ts: the instructions
       models/, helpers/  places and forecasts, weather codes and formatting
     trip-planner/        the trip planner
-      trip-planner.agent.ts  its entry point: tripPlannerAgent(options), its card, instructions and ask_weather_agent, on the runner it is given
+      trip-planner.agent.ts  its entry point: tripPlannerAgent(options), on codexRunner(), with its card, instructions and ask_weather_agent
       prompts/           trip-planner.prompt.ts: the instructions
 apps/client/src          the A2A terminal client
   main.ts                entry point: flags, connection, the read loop

@@ -55,9 +55,3 @@ export interface Runner {
   readonly name: string;
   runTurn: (agent: TurnAgent, request: TurnRequest) => AsyncIterable<TurnEvent>;
 }
-
-/** A runner as configuration names it, `claude` or `codex`, and the model, or the SDK's default when it is left out. */
-export interface RunnerConfig {
-  name: string;
-  model?: string;
-}

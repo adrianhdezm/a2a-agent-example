@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createA2aAgent, resolveRunner } from '../../../../src/agents/core/a2a-agent.ts';
+import { createA2aAgent } from '../../../../src/agents/core/a2a-agent.ts';
 import type { AgentCardBase } from '../../../../src/agents/core/models/a2a-agent.model.ts';
 import type { Runner } from '../../../../src/agents/core/models/runner.model.ts';
 
@@ -41,19 +41,5 @@ describe('createA2aAgent', () => {
 
   it('gives every agent its own request handler, so no two share tasks', () => {
     expect(createA2aAgent(definition, 'http://a').requestHandler).not.toBe(createA2aAgent(definition, 'http://a').requestHandler);
-  });
-});
-
-describe('resolveRunner', () => {
-  it.each(['claude', 'codex'])('makes the %s runner from its name', (name) => {
-    expect(resolveRunner({ name }).name).toBe(name);
-  });
-
-  it('hands back a runner it is given', () => {
-    expect(resolveRunner(runner)).toBe(runner);
-  });
-
-  it('refuses a runner it does not know, naming the ones it does', () => {
-    expect(() => resolveRunner({ name: 'gpt' })).toThrow('Unknown runner "gpt": use claude, codex');
   });
 });

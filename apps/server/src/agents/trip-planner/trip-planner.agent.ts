@@ -1,16 +1,15 @@
-import { askAgentTool, createA2aAgent, resolveRunner } from '../core/a2a-agent.ts';
-import type { A2aAgent, AgentCardBase, AgentSpec, ConnectAgent, Runner, RunnerConfig } from '../core/a2a-agent.ts';
+import { askAgentTool, codexRunner, createA2aAgent } from '../core/a2a-agent.ts';
+import type { A2aAgent, AgentCardBase, AgentSpec, ConnectAgent, Runner } from '../core/a2a-agent.ts';
 import { tripPlannerInstructions } from './prompts/trip-planner.prompt.ts';
 
 /** What the trip planner needs from the server that runs it. */
 export interface TripPlannerAgentOptions {
   /** Where the server is reached, for the card's endpoint URL. */
   baseUrl: string;
-  /** The runner to run on, as configuration names it, or one a test hands in. */
-  runner: RunnerConfig | Runner;
   /** The A2A URL of the weather agent it asks. */
   weatherAgentUrl: string;
-  /** The A2A SDK's client, unless a test hands in its own. */
+  /** The runner on a fake SDK, and the A2A SDK's client, unless a test hands in its own. */
+  runner?: Runner;
   connect?: ConnectAgent;
 }
 
@@ -49,10 +48,10 @@ const tripPlannerCard: AgentCardBase = {
 };
 
 /**
- * The trip planner, ready to serve on any runner: one tool, `ask_weather_agent`, which asks the weather agent over
- * A2A, instructions dated per turn, and its answer in a `trip-plan` artifact.
+ * The trip planner, ready to serve: it runs on Codex, with one tool, `ask_weather_agent`, which asks the weather agent
+ * over A2A, instructions dated per turn, and its answer in a `trip-plan` artifact.
  */
-export function tripPlannerAgent({ baseUrl, runner, weatherAgentUrl, connect }: TripPlannerAgentOptions): A2aAgent {
+export function tripPlannerAgent({ baseUrl, weatherAgentUrl, runner = codexRunner(), connect }: TripPlannerAgentOptions): A2aAgent {
   const askWeather = askAgentTool({
     name: 'ask_weather_agent',
     agentName: 'Weather Agent',
@@ -66,7 +65,7 @@ export function tripPlannerAgent({ baseUrl, runner, weatherAgentUrl, connect }: 
       id: 'trip-planner',
       card: tripPlannerCard,
       spec,
-      runner: resolveRunner(runner),
+      runner,
       answerArtifact: { name: 'trip-plan', description: "The trip planner's answer" }
     },
     baseUrl

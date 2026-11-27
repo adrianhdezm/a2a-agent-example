@@ -4,38 +4,17 @@ import { DefaultRequestHandler, InMemoryTaskStore } from '@a2a-js/sdk/server';
 import { TurnAgentExecutor } from './executors/turn-agent.executor.ts';
 import { toolsMcpHandler } from './handlers/tools-mcp.handler.ts';
 import type { A2aAgent, AgentDefinition } from './models/a2a-agent.model.ts';
-import type { Runner, RunnerConfig } from './models/runner.model.ts';
-import { claudeRunner } from './runners/claude.runner.ts';
-import { codexRunner } from './runners/codex.runner.ts';
 import { SessionStore } from './stores/session.store.ts';
 
 // core's entry point: what an agent needs from core, and nothing else. Everything below it is core's own.
 export type { A2aAgent, AgentCardBase } from './models/a2a-agent.model.ts';
-export type { AgentSpec, AgentTool, Runner, RunnerConfig, ToolContext } from './models/runner.model.ts';
+export type { AgentSpec, AgentTool, Runner, ToolContext } from './models/runner.model.ts';
 export { ToolError } from './models/runner.model.ts';
 export { defineTool } from './helpers/tool.helper.ts';
 export { claudeRunner } from './runners/claude.runner.ts';
 export { codexRunner } from './runners/codex.runner.ts';
 export { askAgentTool } from './tools/ask-agent.tool.ts';
 export type { ConnectAgent } from './tools/ask-agent.tool.ts';
-
-/** The runners configuration can name, each from its config: the strategies an agent can be run with. */
-const runnersByName: Record<string, (config: RunnerConfig) => Runner> = {
-  claude: ({ model }) => claudeRunner({ model }),
-  codex: ({ model }) => codexRunner({ model })
-};
-
-/** The runner configuration names, or the runner itself when a test hands one in. */
-export function resolveRunner(choice: Runner | RunnerConfig): Runner {
-  if ('runTurn' in choice) {
-    return choice;
-  }
-  const create = runnersByName[choice.name];
-  if (create === undefined) {
-    throw new Error(`Unknown runner "${choice.name}": use ${Object.keys(runnersByName).join(', ')}`);
-  }
-  return create(choice);
-}
 
 /**
  * An agent ready to serve under `baseUrl`, built from its definition, at `/agents/<id>/`: its card with the JSON-RPC
