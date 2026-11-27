@@ -122,7 +122,8 @@ Tests are exempt from both, since `expect(await response.json())` is the test ru
 ### Functions
 
 - **Extract a function only when it is used more than once.** A step used once stays where it runs, and a `const` with a meaningful name carries what a function name would (`const tool = block.name.replace(/^mcp__[^_]+__/, '')`); a `switch` case that needs statements gets braces. Exported functions are a module's API and are exempt.
-- **When a size limit fires, split by meaning**, and prefer a piece that is then used more than once (`renderAnswer` serves both artifacts and messages). A private function used once exists only because a limit fired without it: `#runOneTurn` (the executor's complexity), `compactStatus` and `renderStatus` (`renderEvent`'s complexity), the client's `ask` (the read loop's nesting), the Claude runner's `toolServer` and the MCP handler's `toolsServer` (their factory's size), the Codex runner's `startedItem` and `translateRun` (`translateCodexEvent`'s complexity and `runTurn`'s size), and the ask-agent tool's `question`, `trackStatus` and `reply` (`run`'s and `track`'s complexity).
+- **A size guardrail is a prompt to look, not an order to split.** When one fires, read the function. If it is hard to follow, split it by meaning, into pieces whose names say more than their bodies or that are used more than once (`renderAnswer` serves both artifacts and messages). If it reads well as one piece, keep it whole and silence the rule on that line with its reason (`// eslint-disable-next-line complexity -- one case per A2A state`). Never extract a one-off helper only to bring a count down: a reader then jumps between pieces that only make sense together.
+- **A private function used once is a unit with a name worth reading**: `#runOneTurn` (one turn, apart from publishing the task), the Claude runner's `toolServer` (the agent's tools as an in-process MCP server), the ask-agent tool's `question` (the A2A message), and the client's `ask`, `compactStatus` and `renderStatus`.
 
 ### Exceptions
 
@@ -131,6 +132,7 @@ Tests are exempt from both, since `expect(await response.json())` is the test ru
 - **No `express.json()`**: the server's own routes take no body, and the A2A JSON-RPC handler parses its own, answering malformed JSON as a JSON-RPC parse error.
 - **No DAO yet**: the only state is the `session` store, in memory. When it moves to a database it becomes `agents/core/daos/session.dao.ts`, following Data access.
 - **`GET /health` probes nothing**: the models and Open-Meteo are reached per turn, and a failing one fails that turn, not the server.
+- **The size guardrails are looser than the stack docs', and statements are not counted**: complexity 15 rather than 10, functions up to 80 lines without blanks and comments, and no `max-statements`. At the stricter limits, flat `switch`es over A2A states and SDK events, and `?.` and `??` chains, fired them while being the easiest form to read, and the splits they forced made the code harder to follow. Function length is `max-lines-per-function`'s job.
 - **The client is a command line, not an Express app**, so it keeps the Node package layout (`src/main.ts` and its modules).
 - **The root `format` and `format:check` also cover the root's own files** (`*.json`, `*.md`, `*.yaml`), which `pnpm -r` never reaches.
 - **`pnpm test` and `pnpm test:integration` never call a model or Open-Meteo**: each runner's SDK entry and `fetch` are handed in, so tests use recorded samples and fakes. The API tests run the trip planner on a fake Codex that calls the agent's MCP tools endpoint as the Codex CLI does, so its tools really run and its calls to the weather agent go over real HTTP.
@@ -178,7 +180,7 @@ package with a base file, and the scripts into root `pnpm -r` rollups.
   restate the code.
 - **Named exports only**, except where a tool requires a default export (a file a tool loads by convention, as its
   technology doc says).
-- **Split a function or file when a size limit fires**; never raise the limit.
+- **When a size guardrail fires, look before you split**; split by meaning, never into one-off helpers that exist only for the count.
 - **Every suppression says why**, next to where it applies, as narrowly as possible.
 - **Handle absence; never assert it away.**
 - **Narrow with checks instead of casting**; tests may assert.
@@ -328,8 +330,8 @@ errors:  next(err) ─► notFoundHandler ─► errorHandler ─► { status: '
 
 - **`pnpm lint` reports code problems**; formatting is not its job.
 - **Always braces** (`curly`), even around a one-line body.
-- **Size guardrails warn** (complexity 10, depth 4, 75 lines per function, 20 statements, 4 parameters, 400 lines per
-  file, 3 nested callbacks): split rather than raise the limit.
+- **Size guardrails warn** (complexity 15, depth 4, 80 lines per function not counting blanks and comments, 4
+  parameters, 400 lines per file, 3 nested callbacks): they flag code to look at, as Functions says.
 - **An override is per folder or file pattern, with a comment saying why**, never a blanket `eslint-disable` at the top
   of a file. A single-line disable names the rule and carries its reason.
 - **Generated and vendored code is ignored**, never patched with overrides.

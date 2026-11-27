@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Codex } from '@openai/codex-sdk';
-import type { CodexOptions, ThreadEvent, ThreadItem, ThreadOptions, TurnOptions } from '@openai/codex-sdk';
+import type { CodexOptions, ThreadEvent, ThreadOptions, TurnOptions } from '@openai/codex-sdk';
 import { answerJsonSchema, readAnswerText, toolCallProgress } from '../helpers/answer.helper.ts';
 import type { Runner, TurnAgent } from '../models/runner.model.ts';
 import type { TurnEvent } from '../models/turn.model.ts';
@@ -46,7 +46,10 @@ export function translateCodexEvent(event: ThreadEvent, lastMessage: string | un
     case 'thread.started':
       return { type: 'session', sessionId: event.thread_id };
     case 'item.started':
-      return startedItem(event.item);
+      if (event.item.type === 'mcp_tool_call') {
+        return toolCallProgress(event.item.tool, event.item.arguments);
+      }
+      return event.item.type === 'command_execution' ? { type: 'progress', text: `Running ${event.item.command}` } : undefined;
     case 'turn.completed':
       return readAnswerText(lastMessage);
     case 'turn.failed':
@@ -57,13 +60,6 @@ export function translateCodexEvent(event: ThreadEvent, lastMessage: string | un
     default:
       return undefined;
   }
-}
-
-function startedItem(item: ThreadItem): TurnEvent | undefined {
-  if (item.type === 'mcp_tool_call') {
-    return toolCallProgress(item.tool, item.arguments);
-  }
-  return item.type === 'command_execution' ? { type: 'progress', text: `Running ${item.command}` } : undefined;
 }
 
 // Codex works in a folder of its own, created once and left empty: no project files, no AGENTS.md, nothing to change.
@@ -102,26 +98,6 @@ export function codexOptions(agent: TurnAgent, contextId: string): CodexOptions 
   return { config };
 }
 
-/** One run's events as turn events, ended once Codex calls tools more often than the agent allows. */
-async function* translateRun(events: AsyncIterable<ThreadEvent>, maxSteps: number): AsyncGenerator<TurnEvent> {
-  let lastMessage: string | undefined;
-  let toolCalls = 0;
-  for await (const event of events) {
-    if (event.type === 'item.completed' && event.item.type === 'agent_message') {
-      lastMessage = event.item.text;
-    }
-    toolCalls += event.type === 'item.started' && event.item.type === 'mcp_tool_call' ? 1 : 0;
-    if (toolCalls > maxSteps) {
-      yield { type: 'result', ok: false, error: `the turn took more than ${String(maxSteps)} steps` };
-      return;
-    }
-    const turnEvent = translateCodexEvent(event, lastMessage);
-    if (turnEvent !== undefined) {
-      yield turnEvent;
-    }
-  }
-}
-
 /**
  * The Codex SDK as a runner: one thread run per turn, on a new thread or the session's, its tools reached over MCP.
  * Codex has no step limit of its own, so the runner counts tool calls against the agent's `maxSteps` and stops the run
@@ -139,8 +115,24 @@ export function codexRunner({ model, codex = (options) => new Codex(options) }: 
       const ended = new AbortController();
       const signal = AbortSignal.any([request.abortController.signal, ended.signal]);
       const { events } = await thread.runStreamed(request.prompt, { outputSchema, signal });
+      // The answer is the last agent message, read when the run completes.
+      let lastMessage: string | undefined;
+      let toolCalls = 0;
       try {
-        yield* translateRun(events, agent.maxSteps);
+        for await (const event of events) {
+          if (event.type === 'item.completed' && event.item.type === 'agent_message') {
+            lastMessage = event.item.text;
+          }
+          toolCalls += event.type === 'item.started' && event.item.type === 'mcp_tool_call' ? 1 : 0;
+          if (toolCalls > agent.maxSteps) {
+            yield { type: 'result', ok: false, error: `the turn took more than ${String(agent.maxSteps)} steps` };
+            return;
+          }
+          const turnEvent = translateCodexEvent(event, lastMessage);
+          if (turnEvent !== undefined) {
+            yield turnEvent;
+          }
+        }
       } finally {
         ended.abort();
       }

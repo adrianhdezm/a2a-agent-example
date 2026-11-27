@@ -1,5 +1,5 @@
 import { Role, TaskState } from '@a2a-js/sdk';
-import type { SendMessageRequest, StreamResponse, TaskStatus } from '@a2a-js/sdk';
+import type { SendMessageRequest, StreamResponse } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 import type { Client } from '@a2a-js/sdk/client';
 import { z } from 'zod';
@@ -33,7 +33,8 @@ interface Conversation {
 /** What one question saw of the other agent's task: its ids, its answer so far, and how it ended. */
 interface Seen {
   contextId: string;
-  taskId?: string;
+  /** Empty until the other agent reports its task. */
+  taskId: string;
   answer: string;
   end?: { state: TaskState; text: string };
 }
@@ -78,28 +79,12 @@ export function track(seen: Seen, event: StreamResponse): void {
   } else if (payload?.$case === 'message') {
     seen.end = { state: TaskState.TASK_STATE_COMPLETED, text: partsText(payload.value.parts) };
   } else if (payload?.$case === 'statusUpdate') {
-    trackStatus(seen, payload.value.status);
+    const { status } = payload.value;
+    const state = status?.state ?? TaskState.TASK_STATE_UNSPECIFIED;
+    if (endStates.has(state)) {
+      seen.end = { state, text: partsText(status?.message?.parts) };
+    }
   }
-}
-
-function trackStatus(seen: Seen, status: TaskStatus | undefined): void {
-  const state = status?.state ?? TaskState.TASK_STATE_UNSPECIFIED;
-  if (endStates.has(state)) {
-    seen.end = { state, text: partsText(status?.message?.parts) };
-  }
-}
-
-/** What the model is told: the answer, or the other agent's question and how to answer it; a failure is a tool error. */
-function reply(seen: Seen, options: AskAgentOptions): string {
-  const { end } = seen;
-  if (end?.state === TaskState.TASK_STATE_COMPLETED) {
-    return seen.answer || end.text;
-  }
-  if (end?.state === TaskState.TASK_STATE_INPUT_REQUIRED) {
-    return `The ${options.agentName} asks: ${end.text}\nIf you cannot answer from what you know, ask the user, then call ${options.name} again with their answer.`;
-  }
-  const why = end === undefined || end.text === '' ? 'it ended without an answer' : end.text;
-  throw new ToolError(`The ${options.agentName} could not answer: ${why}`);
 }
 
 /**
@@ -120,21 +105,31 @@ export function askAgentTool(options: AskAgentOptions): AgentTool {
       client ??= connect(options.url);
       const agent = await client;
       const waiting = conversations.get(contextId);
-      const seen: Seen = { contextId: waiting?.contextId ?? '', answer: '' };
+      const seen: Seen = { contextId: waiting?.contextId ?? '', taskId: '', answer: '' };
       const stream = agent.sendMessageStream(question(text, waiting), { signal });
       try {
         for await (const event of stream) {
           track(seen, event);
         }
       } finally {
-        if (signal.aborted && seen.taskId !== undefined) {
+        if (signal.aborted && seen.taskId !== '') {
           await agent.cancelTask({ tenant: '', id: seen.taskId, metadata: undefined }).catch(() => undefined);
         }
       }
       // Only a task that waits for an answer is continued; otherwise the next question starts one in the context.
-      const waits = seen.end?.state === TaskState.TASK_STATE_INPUT_REQUIRED;
-      conversations.set(contextId, { contextId: seen.contextId, taskId: waits ? (seen.taskId ?? '') : '' });
-      return reply(seen, options);
+      const { end } = seen;
+      const waits = end?.state === TaskState.TASK_STATE_INPUT_REQUIRED;
+      conversations.set(contextId, { contextId: seen.contextId, taskId: waits ? seen.taskId : '' });
+
+      // The model is told the answer, or the other agent's question and how to answer it; a failure is a tool error.
+      if (end?.state === TaskState.TASK_STATE_COMPLETED) {
+        return seen.answer || end.text;
+      }
+      if (waits) {
+        return `The ${options.agentName} asks: ${end.text}\nIf you cannot answer from what you know, ask the user, then call ${options.name} again with their answer.`;
+      }
+      const why = end === undefined || end.text === '' ? 'it ended without an answer' : end.text;
+      throw new ToolError(`The ${options.agentName} could not answer: ${why}`);
     }
   });
 }

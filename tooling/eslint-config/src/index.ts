@@ -62,11 +62,12 @@ export function config({ tsconfigRootDir }: ConfigOptions) {
         ],
         '@typescript-eslint/no-non-null-assertion': 'error',
 
-        // Complexity and size guardrails
-        complexity: ['warn', 10],
+        // Complexity and size guardrails: they flag code to look at, not code to split. ESLint's complexity counts every
+        // case, ?? and ?., so a flat switch reaches 10 while it is the easiest form to read. Function length is
+        // max-lines-per-function's job, so statements are not counted as well.
+        complexity: ['warn', 15],
         'max-depth': ['warn', 4],
-        'max-lines-per-function': ['warn', 75],
-        'max-statements': ['warn', 20],
+        'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
         'max-params': ['warn', 4],
         'max-nested-callbacks': ['warn', 3],
         'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
@@ -85,7 +86,6 @@ export function config({ tsconfigRootDir }: ConfigOptions) {
       rules: {
         'max-lines-per-function': 'off',
         'max-nested-callbacks': 'off',
-        'max-statements': 'off',
         '@typescript-eslint/consistent-type-assertions': 'off',
         'no-restricted-syntax': 'off'
       }
