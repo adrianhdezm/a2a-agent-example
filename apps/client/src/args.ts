@@ -3,7 +3,7 @@ import { UsageError } from './errors/usage-error.ts';
 
 /** What the command line asks of the CLI. */
 export interface CliOptions {
-  /** The agent's base URL; the server this repository runs when absent. */
+  /** The agent's base URL; the trip planner this repository runs when absent. */
   url?: string;
   /** Where the Agent Card is, relative to the URL; the A2A default when absent. */
   cardPath?: string;
@@ -16,7 +16,7 @@ export const usage = `A2A terminal client
 
 Usage: pnpm cli [url] [flags]
 
-  url                 The agent's base URL. Default: the agent this repository runs, on the PORT in .env.
+  url                 The agent's base URL. Default: the trip planner this repository runs, on the PORT in .env.
   --card-path <path>  The Agent Card's path, relative to the url. Default: .well-known/agent-card.json.
   --verbose           Show timestamps, task and context ids, and every state change.
   --help              Show this message.
@@ -41,4 +41,12 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
     throw new UsageError(`Expected at most one url, got: ${positionals.join(' ')}`);
   }
   return { url: positionals[0], cardPath: values['card-path'], verbose: values.verbose ?? false, help: values.help ?? false };
+}
+
+/**
+ * The URL to resolve the card against. The default card path is relative, so without a trailing slash it would replace
+ * the URL's last segment (`/agents/weather` would look in `/agents/`); with a card path given, the URL is taken as is.
+ */
+export function cardBaseUrl(url: string, cardPath: string | undefined): string {
+  return cardPath === undefined && !url.endsWith('/') ? `${url}/` : url;
 }

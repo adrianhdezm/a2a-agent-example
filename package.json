@@ -1,7 +1,7 @@
 {
   "name": "a2a-agent-example",
   "version": "0.0.0",
-  "description": "A weather agent on the Claude Agent SDK, served over A2A 1.0, with an interactive A2A command-line client.",
+  "description": "A weather agent and a trip planner that asks it, served over A2A 1.0, each on the Claude Agent SDK or the Codex SDK, with an interactive A2A command-line client.",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.23.0",

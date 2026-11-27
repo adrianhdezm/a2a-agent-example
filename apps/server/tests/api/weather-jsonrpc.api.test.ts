@@ -29,10 +29,10 @@ function message(text: string, taskRef: { contextId?: string; taskId?: string } 
 }
 
 async function clientFor(app: TestApp) {
-  return new ClientFactory().createFromUrl(app.baseUrl);
+  return new ClientFactory().createFromUrl(`${app.baseUrl}/agents/weather/`);
 }
 
-describe('POST /a2a/jsonrpc', () => {
+describe('POST /agents/weather/a2a/jsonrpc', () => {
   let app: TestApp | undefined;
 
   afterEach(async () => {
@@ -49,7 +49,7 @@ describe('POST /a2a/jsonrpc', () => {
       name: 'forecast',
       parts: [{ content: { $case: 'text', value: 'Take an umbrella tomorrow.' } }]
     });
-    expect(app.turns[0]?.allowedTools).toEqual(['mcp__weather__find_city', 'mcp__weather__get_forecast']);
+    expect(app.turns[0]?.allowedTools).toEqual(['mcp__agent__find_city', 'mcp__agent__get_forecast']);
   });
 
   it('streams the task, the progress, the artifact and the final state', async () => {
@@ -84,7 +84,7 @@ describe('POST /a2a/jsonrpc', () => {
   it('answers malformed JSON with a JSON-RPC parse error, not the server error shape', async () => {
     app = await serveTestApp([answer]);
 
-    const response = await fetch(`${app.baseUrl}/a2a/jsonrpc`, {
+    const response = await fetch(`${app.baseUrl}/agents/weather/a2a/jsonrpc`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'A2A-Version': '1.0' },
       body: '{"jsonrpc": "2.0", "method":'

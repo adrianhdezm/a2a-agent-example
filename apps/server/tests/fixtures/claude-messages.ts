@@ -13,7 +13,7 @@ export const toolCall = {
   message: {
     content: [
       { type: 'text', text: "I'll look up Lisbon first." },
-      { type: 'tool_use', id: 'toolu_01', name: 'mcp__weather__find_city', input: { name: 'Lisbon' } }
+      { type: 'tool_use', id: 'toolu_01', name: 'mcp__agent__find_city', input: { name: 'Lisbon' } }
     ]
   }
 } as unknown as SDKMessage;
@@ -23,9 +23,7 @@ export const forecastCall = {
   type: 'assistant',
   session_id: sessionId,
   message: {
-    content: [
-      { type: 'tool_use', id: 'toolu_03', name: 'mcp__weather__get_forecast', input: { latitude: 38.72, longitude: -9.13, days: 2 } }
-    ]
+    content: [{ type: 'tool_use', id: 'toolu_03', name: 'mcp__agent__get_forecast', input: { latitude: 38.72, longitude: -9.13, days: 2 } }]
   }
 } as unknown as SDKMessage;
 

@@ -9,7 +9,7 @@ import { errorHandler } from './middlewares/error.middleware.ts';
 import { notFoundHandler } from './middlewares/not-found.middleware.ts';
 import type { AppContext } from './models/app-context.model.ts';
 
-/** The Express app: `GET /health`, the agent's A2A card and JSON-RPC endpoint, and a 404 in the standard shape for anything else. */
+/** The Express app: `GET /health`, each agent's A2A card, JSON-RPC endpoint and MCP tools, and a 404 in the standard shape for anything else. */
 export function createApp(context: AppContext): Express {
   const app = express();
   app.locals.context = context;
@@ -22,9 +22,14 @@ export function createApp(context: AppContext): Express {
   app.get('/health', getHealth);
   // The A2A endpoints are the SDK's own handlers, with no controller in front: the SDK answers them, as the A2A spec
   // says. app.use, not app.get or app.post, because they are routers that match `/` beneath the mount path.
-  const { requestHandler, paths } = context.agent;
-  app.use(paths.card, agentCardHandler({ agentCardProvider: requestHandler }));
-  app.use(paths.jsonRpc, jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
+  for (const { requestHandler, toolsHandler, paths } of context.agents) {
+    app.use(paths.card, agentCardHandler({ agentCardProvider: requestHandler }));
+    app.use(paths.jsonRpc, jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
+    // The agent's tools over MCP, for a runner whose SDK reaches its tools that way: the MCP SDK answers, as for A2A.
+    app.all(`${paths.mcp}/:contextId`, (req, res, next) => {
+      toolsHandler(req.params.contextId, req, res).catch(next);
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

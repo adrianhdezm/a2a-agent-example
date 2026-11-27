@@ -1,33 +1,55 @@
-import type { McpServerConfig, Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
-import { claudeOptions, runClaudeTurn, translateClaudeMessage } from '../../../../../src/agents/core/runners/claude.runner.ts';
-import type { ClaudeTurnSettings } from '../../../../../src/agents/core/runners/claude.runner.ts';
-import type { TurnEvent } from '../../../../../src/agents/core/models/turn.model.ts';
-import { answer, init, maxTurns, question, sessionId, success, toolCall, unreadable } from '../../../../fixtures/claude-messages.ts';
+import { claudeOptions, claudeRunner, translateClaudeMessage } from '../../../../../src/agents/core/runners/claude.runner.ts';
+import type { ClaudeQuery } from '../../../../../src/agents/core/runners/claude.runner.ts';
+import {
+  answer,
+  init,
+  maxTurns,
+  question,
+  sessionId,
+  structuredResult,
+  success,
+  toolCall,
+  unreadable
+} from '../../../../fixtures/claude-messages.ts';
+import { collect, contractAgent, describeRunnerContract, request } from './runner-contract.ts';
+import type { ScriptedTurn, SeenTurn } from './runner-contract.ts';
 
-function settings(messages: SDKMessage[] = []) {
-  const calls: { prompt: string; options: Options }[] = [];
-  const value: ClaudeTurnSettings = {
-    systemPrompt: () => 'You are a weather assistant.',
-    mcpServers: { weather: { type: 'stdio', command: 'unused' } satisfies McpServerConfig },
-    allowedTools: ['mcp__weather__find_city'],
-    maxTurns: 8,
-    // eslint-disable-next-line @typescript-eslint/require-await -- an async stream over a fixed list
-    query: async function* (params) {
-      calls.push(params);
-      yield* messages;
-    }
-  };
-  return { calls, value };
-}
-
-async function collect(events: AsyncIterable<TurnEvent>): Promise<TurnEvent[]> {
-  const collected: TurnEvent[] = [];
-  for await (const event of events) {
-    collected.push(event);
+/** The messages the Claude Agent SDK streams for one scripted turn in the session `session`. */
+function claudeMessages(turn: ScriptedTurn, session: string): SDKMessage[] {
+  const start = { type: 'system', subtype: 'init', session_id: session } as unknown as SDKMessage;
+  if (turn.kind === 'malformed') {
+    return [start, structuredResult({ answer: 'no format' })];
   }
-  return collected;
+  if (turn.kind === 'answer') {
+    return [start, structuredResult({ outcome: turn.outcome, text: turn.text })];
+  }
+  const call = {
+    type: 'assistant',
+    session_id: session,
+    message: { content: [{ type: 'tool_use', id: 'toolu_01', name: 'mcp__agent__lookup', input: turn.input }] }
+  } as unknown as SDKMessage;
+  return [start, call, structuredResult({ outcome: 'completed', text: turn.text })];
 }
+
+/** A fake `query()` that plays the turns, keeps the prompts of each session, and fails once aborted, as the SDK does. */
+function playClaude(turns: ScriptedTurn[]) {
+  const seen: SeenTurn[] = [];
+  const sessions = new Map<string, string[]>();
+  // eslint-disable-next-line @typescript-eslint/require-await -- an async stream over a fixed list
+  const query: ClaudeQuery = async function* ({ prompt, options }) {
+    options.abortController?.signal.throwIfAborted();
+    const session = options.resume ?? `session-${String(sessions.size + 1)}`;
+    const earlier = sessions.get(session) ?? [];
+    seen.push({ prompt, earlier });
+    sessions.set(session, [...earlier, prompt]);
+    yield* claudeMessages(turns[seen.length - 1] ?? { kind: 'malformed' }, session);
+  };
+  return { runner: claudeRunner({ query }), seen: () => seen };
+}
+
+describeRunnerContract('claude', { play: playClaude });
 
 describe('claude.runner', () => {
   describe('translateClaudeMessage', () => {
@@ -35,7 +57,7 @@ describe('claude.runner', () => {
       expect(translateClaudeMessage(init)).toEqual([{ type: 'session', sessionId }]);
     });
 
-    it('reports the text and the tool calls of a message that calls tools as progress', () => {
+    it('reports the text and the tool calls of a message that calls tools as progress, by the tool name', () => {
       expect(translateClaudeMessage(toolCall)).toEqual([
         { type: 'progress', text: "I'll look up Lisbon first." },
         { type: 'progress', text: 'Calling find_city {"name":"Lisbon"}' }
@@ -61,46 +83,51 @@ describe('claude.runner', () => {
   });
 
   describe('claudeOptions', () => {
-    it("gives Claude only the agent's tools, none of the machine's settings, the session to resume, and the server's own environment", () => {
-      const abortController = new AbortController();
+    it("gives Claude only the agent's tools, none of the machine's settings, the session to resume, and the step limit", () => {
+      const turn = request('Lisbon tomorrow?', sessionId);
 
-      const options = claudeOptions(settings().value, { prompt: 'Lisbon tomorrow?', sessionId, abortController });
+      const options: Options = claudeOptions(contractAgent, turn);
 
       expect(options).toMatchObject({
-        systemPrompt: 'You are a weather assistant.',
+        systemPrompt: 'You look things up.',
         resume: sessionId,
-        abortController,
+        abortController: turn.abortController,
         tools: [],
-        allowedTools: ['mcp__weather__find_city'],
+        allowedTools: ['mcp__agent__lookup'],
         settingSources: [],
-        maxTurns: 8
+        maxTurns: 4
       });
+      expect(Object.keys(options.mcpServers ?? {})).toEqual(['agent']);
       expect(options.env).toBeUndefined();
+      expect(options.model).toBeUndefined();
     });
 
     it('asks for the answer as an outcome and a text, both required, in the JSON Schema draft the CLI reads', () => {
-      const { outputFormat } = claudeOptions(settings().value, { prompt: 'Lisbon tomorrow?', abortController: new AbortController() });
+      const { outputFormat } = claudeOptions(contractAgent, request('Lisbon tomorrow?'));
 
       expect(outputFormat).toMatchObject({
         type: 'json_schema',
         schema: {
           $schema: 'http://json-schema.org/draft-07/schema#',
-          type: 'object',
           properties: { outcome: { enum: ['completed', 'input-required'] }, text: { type: 'string' } },
           required: ['outcome', 'text']
         }
       });
     });
+
+    it('runs the model it is given', () => {
+      expect(claudeOptions(contractAgent, request('Lisbon?'), 'claude-sonnet-4-6').model).toBe('claude-sonnet-4-6');
+    });
   });
 
-  describe('runClaudeTurn', () => {
-    it('runs one query with the prompt and yields what its messages report', async () => {
-      const { calls, value } = settings([init, toolCall, answer, success]);
+  it('fails the turn past the step limit, as the SDK reports it', async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- an async stream over a fixed list
+    const query: ClaudeQuery = async function* () {
+      yield* [init, maxTurns];
+    };
 
-      const events = await collect(runClaudeTurn(value, { prompt: 'Lisbon tomorrow?', abortController: new AbortController() }));
+    const events = await collect(claudeRunner({ query }).runTurn(contractAgent, request('Lisbon?')));
 
-      expect(calls.map(({ prompt }) => prompt)).toEqual(['Lisbon tomorrow?']);
-      expect(events.map(({ type }) => type)).toEqual(['session', 'progress', 'progress', 'result']);
-    });
+    expect(events.at(-1)).toEqual({ type: 'result', ok: false, error: 'error_max_turns' });
   });
 });
